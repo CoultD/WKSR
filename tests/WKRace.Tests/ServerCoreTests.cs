@@ -528,9 +528,9 @@ namespace WKRace.Tests
                 Assert.Equal(MatchOutcome.Win, a.Result.Outcome);
                 Assert.Equal(MatchOutcome.Loss, b.Result.Outcome);
                 Assert.Equal(1000, a.Result.OldRating);
-                // Both are new (provisional), so ratings move twice as far as the usual 16.
-                Assert.Equal(1032, a.Result.NewRating);
-                Assert.Equal(968, b.Result.NewRating);
+                // An even match moves both by 16.
+                Assert.Equal(1016, a.Result.NewRating);
+                Assert.Equal(984, b.Result.NewRating);
                 Assert.Equal(60000, a.Result.YourTimeMs);
                 Assert.Equal(-1, a.Result.OpponentTimeMs);
                 Assert.Equal(0, h.Core.ActiveMatchCount);
@@ -976,8 +976,8 @@ namespace WKRace.Tests
                 {
                     var reloaded = new PlayerStore(db);
                     Assert.Equal(2, reloaded.Count);
-                    Assert.Equal(968, reloaded.Find(a.Id).Rating);
-                    Assert.Equal(1032, reloaded.Find(b.Id).Rating);
+                    Assert.Equal(984, reloaded.Find(a.Id).Rating);
+                    Assert.Equal(1016, reloaded.Find(b.Id).Rating);
                     Assert.Equal(1, reloaded.Find(b.Id).Wins);
                 }
             }

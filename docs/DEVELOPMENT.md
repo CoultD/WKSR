@@ -17,7 +17,7 @@ It has two parts:
 2. When a match is found, the plugin loads the **Campaign** gamemode on the match seed, with **competitive** rules, automatically.
 3. Each world is generated and frozen. When every player's world has loaded, the **ready check** starts: each player presses F9 (or READY in WKSR) within 60 seconds (`--ready-seconds`). When everyone is ready, a 5 second countdown starts and everyone is released at the same moment. Not ready in time: in a ranked match that player forfeits (rated); a friendly 1v1 is called off and both are back in the lobby; a party match starts anyway, with the unready players standing at the bottom.
 4. The match clock is real time since GO. Every new level you enter is a split; the HUD shows the difference to your opponent's time at the same split.
-5. First to finish wins (a 1.5 second window decides near-ties by time). Winner and loser get Elo rating changes: 16 points for an even match, twice that for a player in their first 10 ranked matches (shown as PROVISIONAL), so new players reach their level quickly.
+5. First to finish wins (a 1.5 second window decides near-ties by time). Winner and loser get Elo rating changes: 16 points for an even match, the same for every player (there is no provisional period).
 
 The player name is the Steam name. Names are unique (ignoring case): a name another player already has gets a number ("Name 2").
 
@@ -51,7 +51,7 @@ WKSR plays the voices itself, each through a small jitter buffer. In a match a v
 
 ### Chat
 
-F8 (rebindable in OPTIONS) opens and closes the chat panel; Enter sends to the selected room, and tabs are clicked with the mouse. Rooms: **Global** (joined after connecting unless OPTIONS > CHAT is unticked) and **Match** (the lobby or 1v1, opens and closes with it). While typing, the game gets no input and held grips stay held. The server keeps each room's last 24 hours (300 lines) in memory only and sends recent lines to whoever joins; nothing is written to disk. 5 lines within 5 seconds silence a player for 5 seconds. `/mute name` and `/unmute name` hide a player's lines (kept in `client.json`).
+F8 (rebindable in OPTIONS) opens and closes the chat panel; Enter sends to the selected room, and tabs are clicked with the mouse. Rooms: **Global** (joined after connecting unless OPTIONS > CHAT is unticked) and **Match** (the lobby or 1v1, opens and closes with it). While typing, the game gets no input and held grips stay held. The server keeps each room's last 24 hours (300 lines) in memory only and sends recent lines to whoever joins; nothing is written to disk. 5 lines within 5 seconds silence a player for 5 seconds. Chat text is orange; a player joining a lobby shows in green, one leaving in red. With the panel closed, the newest line shows at the bottom of the screen for 10 seconds after it arrives (OPTIONS, CHAT turns that off). `/mute name` and `/unmute name` hide a player's lines (kept in `client.json`).
 
 ## Steam lobbies
 

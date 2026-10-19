@@ -48,6 +48,8 @@ namespace WKRace.Client
         public bool Online { get; set; }
         // The player turned off joining the Global chat by itself (OPTIONS, CHAT).
         public bool ChatGlobalOff { get; set; }
+        // The player switched off the newest chat line shown under the closed chat (OPTIONS, CHAT).
+        public bool ChatPreviewOff { get; set; }
         public bool LobbyUnapproved { get; set; }
         // CREATE LOBBY: listed in the lobby browser (else only joinable with its code).
         public bool LobbyPublic { get; set; } = true;

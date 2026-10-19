@@ -43,14 +43,13 @@ namespace WKRace.Tests
         }
 
         [Fact]
-        public void ProvisionalPlayers_MoveTwiceAsFast()
+        public void EveryPlayer_MovesByTheSameAmount()
         {
+            // No provisional period: a new player and an established one move alike.
             int a = 1000, b = 1000;
-            Elo.Update(ref a, ref b, 1.0, Elo.ProvisionalK, Elo.K);
-            Assert.Equal(1032, a);   // the new player moves 32
-            Assert.Equal(984, b);    // the established one only 16
-            Assert.True(new PlayerRecord { Wins = 5, Losses = 4 }.Provisional);
-            Assert.False(new PlayerRecord { Wins = 5, Losses = 5 }.Provisional);
+            Elo.Update(ref a, ref b, 1.0);
+            Assert.Equal(1016, a);
+            Assert.Equal(984, b);
         }
 
         [Fact]

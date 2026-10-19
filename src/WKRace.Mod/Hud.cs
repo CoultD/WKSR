@@ -900,6 +900,20 @@ namespace WKRace.Mod
 
         private static readonly Color ChatGold = new Color(0.92f, 0.63f, 0.26f);
         private static readonly Color ChatRed = new Color(0.95f, 0.3f, 0.25f);
+        // Chat text is orange (the colour the "joined" line had); a player joining is green, one leaving red.
+        private static readonly Color ChatText = new Color(1f, 0.8f, 0.3f);
+        private static readonly Color ChatJoin = new Color(0.55f, 0.9f, 0.4f);
+        private static readonly Color ChatLeave = new Color(0.95f, 0.35f, 0.3f);
+        private const int ChatFont = 22;
+        // The newest line under a closed chat stays this long after it arrived, then fades out over a second.
+        private const float ChatPreviewSeconds = 10f;
+
+        private static Color ChatColor(WKRace.Client.ChatRoomLine line)
+        {
+            if (line.System && line.Text.EndsWith(" joined.", System.StringComparison.Ordinal)) return ChatJoin;
+            if (line.System && line.Text.EndsWith(" left.", System.StringComparison.Ordinal)) return ChatLeave;
+            return ChatText;
+        }
         private Image _chatBlocker;
 
         public float VirtualWidth { get { return _vw; } }
@@ -921,14 +935,18 @@ namespace WKRace.Mod
 
             if (!chat.Open)
             {
-                if (room == null || room.Lines.Count == 0 || !vm.ChatConnected) return;
+                if (room == null || room.Lines.Count == 0 || !vm.ChatConnected || !vm.ChatPreview) return;
+                float age = (float)(System.DateTime.UtcNow - room.LastLineAt).TotalSeconds;
+                if (age >= ChatPreviewSeconds + 1f) return;
                 WKRace.Client.ChatRoomLine last = room.Lines[room.Lines.Count - 1];
-                Label(20, _vh - 60f, 1100, 21, Shorten(last.Short(), 120), 15, last.System ? Warning : Neutral, TextAlignmentOptions.Left);
+                Color color = ChatColor(last);
+                color.a = Mathf.Clamp01(ChatPreviewSeconds + 1f - age);
+                Label(20, _vh - 70f, 1500, 29, Shorten(last.Short(), 120), ChatFont, color, TextAlignmentOptions.Left);
                 return;
             }
 
             // The tabs: the joined rooms, each with an x to leave it, then the + for the list of rooms.
-            const float tabHeight = 28f, lineHeight = 22f;
+            const float tabHeight = 28f, lineHeight = 30f;
             float x = 8f, y = top + 6f;
             foreach (WKRace.Client.ChatRoomModel tab in vm.Rooms)
             {
@@ -950,17 +968,17 @@ namespace WKRace.Mod
             Label(_vw - 620, y + 4, 604, 20, "ENTER send    " + RaceConfig.ChatKey.Value + " close", 13, Dim, TextAlignmentOptions.Right);
 
             // The input line, at the bottom.
-            float inputY = _vh - 36f;
+            float inputY = _vh - 44f;
             float areaTop = y + tabHeight + 12f;
-            Panel(8, inputY, _vw - 16, 28, new Color(0.12f, 0.12f, 0.12f, 0.98f));
+            Panel(8, inputY, _vw - 16, 36, new Color(0.12f, 0.12f, 0.12f, 0.98f));
             string caret = ((int)(Time.unscaledTime * 2f)) % 2 == 0 ? "_" : " ";
             string target = room == null ? "" : "[" + room.Name + "] ";
             // How many characters fit on a row (the font is not fixed-width, so this stays on the safe side).
-            int perRow = Mathf.Max(40, Mathf.FloorToInt((_vw - 70f) / 8f));
+            int perRow = Mathf.Max(40, Mathf.FloorToInt((_vw - 70f) / 11.5f));
             // A long line shows its end, where the typing is.
             int fits = perRow - 40;
             string draft = chat.Draft.Length > fits ? "..." + chat.Draft.Substring(chat.Draft.Length - fits) : chat.Draft;
-            Label(18, inputY + 4, _vw - 220, 21, target + draft + caret, 16, Color.white, TextAlignmentOptions.Left);
+            Label(18, inputY + 4, _vw - 220, 29, target + draft + caret, ChatFont, Color.white, TextAlignmentOptions.Left);
             // How many characters are left for this line.
             int left = ProtocolConstants.MaxChatLength - chat.Draft.Length;
             // Silenced for sending too fast: the seconds left, counting down, in place of the characters left.
@@ -1013,7 +1031,7 @@ namespace WKRace.Mod
                     List<string> parts = WrapChat(line.Display(), perRow);
                     for (int p = parts.Count - 1; p >= 0 && shown < rows; p--, shown++)
                     {
-                        Label(p == 0 ? 20 : 44, ly, _vw - 64, 21, parts[p], 15, line.System ? Warning : Neutral, TextAlignmentOptions.Left);
+                        Label(p == 0 ? 20 : 44, ly, _vw - 64, 29, parts[p], ChatFont, ChatColor(line), TextAlignmentOptions.Left);
                         ly -= lineHeight;
                     }
                 }

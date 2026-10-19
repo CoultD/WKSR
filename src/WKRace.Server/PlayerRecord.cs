@@ -22,39 +22,22 @@ namespace WKRace.Server
         public string BanReason { get; set; }
         // Set by an admin rename: the server keeps this name whatever the client sends.
         public bool NameLocked { get; set; }
-
-        // Ratings move faster in a player's first ranked races.
-        public bool Provisional { get { return Wins + Losses < Elo.ProvisionalGames; } }
     }
 
     public static class Elo
     {
         public const int StartRating = 1000;
         public const int MinRating = 100;
+        // Every ranked match moves both ratings by the same K (there is no provisional period, from 0.9.6).
         public const int K = 32;
-        // A player's first ranked races move their rating twice as fast, so it finds their level sooner.
-        public const int ProvisionalGames = 10;
-        public const int ProvisionalK = 64;
 
         // scoreA is 1 for an A win and 0 for a loss.
         public static void Update(ref int ratingA, ref int ratingB, double scoreA)
         {
-            Update(ref ratingA, ref ratingB, scoreA, K, K);
-        }
-
-        // Each side moves by its own K, so a provisional player does not drag an established one around.
-        public static void Update(ref int ratingA, ref int ratingB, double scoreA, int kA, int kB)
-        {
             double expectedA = 1.0 / (1.0 + Math.Pow(10.0, (ratingB - ratingA) / 400.0));
-            int deltaA = (int)Math.Round(kA * (scoreA - expectedA));
-            int deltaB = (int)Math.Round(kB * (scoreA - expectedA));
-            ratingA = Math.Max(MinRating, ratingA + deltaA);
-            ratingB = Math.Max(MinRating, ratingB - deltaB);
-        }
-
-        public static int KFor(PlayerRecord p)
-        {
-            return p.Provisional ? ProvisionalK : K;
+            int delta = (int)Math.Round(K * (scoreA - expectedA));
+            ratingA = Math.Max(MinRating, ratingA + delta);
+            ratingB = Math.Max(MinRating, ratingB - delta);
         }
     }
 

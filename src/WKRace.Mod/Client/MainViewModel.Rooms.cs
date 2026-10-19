@@ -39,6 +39,8 @@ namespace WKRace.Client
         public bool Available;
         // Lines that came in while another room was selected.
         public int Unread;
+        // When the newest line arrived (the line under a closed chat fades some time after it).
+        public DateTime LastLineAt = DateTime.MinValue;
         public readonly List<ChatRoomLine> Lines = new List<ChatRoomLine>();
     }
 
@@ -91,6 +93,19 @@ namespace WKRace.Client
         }
 
         // The Global chat is joined by itself after connecting, unless the player turned that off (OPTIONS, CHAT).
+        // The newest line under the closed chat (it fades 10 s after it arrived). OPTIONS, CHAT can switch it off.
+        public bool ChatPreview
+        {
+            get { return !_settings.ChatPreviewOff; }
+            set
+            {
+                if (_settings.ChatPreviewOff == !value) return;
+                _settings.ChatPreviewOff = !value;
+                _settings.Save();
+                Raise();
+            }
+        }
+
         public bool ChatAutoGlobal
         {
             // Steam lobbies have no Global room: there is no server everyone shares.
@@ -243,6 +258,7 @@ namespace WKRace.Client
             }
             long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             room.Lines.Add(new ChatRoomLine { UnixMs = chat.SentUnixMs > 0 ? chat.SentUnixMs : now, From = chat.From ?? "", Text = chat.Text ?? "", System = chat.System });
+            if (!chat.History) room.LastLineAt = DateTime.UtcNow;
             int drop = 0;
             while (drop < room.Lines.Count && (room.Lines.Count - drop > RoomKeepLines || room.Lines[drop].UnixMs <= now - RoomKeepMs)) drop++;
             if (drop > 0) room.Lines.RemoveRange(0, drop);

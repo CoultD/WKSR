@@ -776,7 +776,7 @@ namespace WKRace.Server
                 outcomeB = winner == b ? MatchOutcome.Win : MatchOutcome.Loss;
                 int ratingA = oldA;
                 int ratingB = oldB;
-                Elo.Update(ref ratingA, ref ratingB, winner == a ? 1.0 : 0.0, Elo.KFor(a.Player.Record), Elo.KFor(b.Player.Record));
+                Elo.Update(ref ratingA, ref ratingB, winner == a ? 1.0 : 0.0);
                 a.Player.Record.Rating = ratingA;
                 b.Player.Record.Rating = ratingB;
                 Credit(a, outcomeA);

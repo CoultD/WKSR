@@ -73,7 +73,7 @@ namespace WKRace.Mod
             Page("menu-5-leaderboards", WksrWindow.Page.Boards, 2.5f);
             Page("menu-6-options", WksrWindow.Page.Options, 1.5f);
             Page("menu-7-replays", WksrWindow.Page.Replays, 1.5f);
-            Do(() => MenuUi.Window.Show(WksrWindow.Page.Main));
+            Do(() => MenuUi.Window.Home());
 
             switch (action)
             {
@@ -169,7 +169,7 @@ namespace WKRace.Mod
             Page("steam-3-unranked", WksrWindow.Page.Unranked, 1.5f);
             Page("steam-4-segments", WksrWindow.Page.Segments, 1.5f);
             Page("steam-5-options", WksrWindow.Page.Options, 1.5f);
-            Do(() => MenuUi.Window.Show(WksrWindow.Page.Main));
+            Do(() => MenuUi.Window.Home());
             if (action != "steam-lobby")
             {
                 Do(() => Plugin.Log.LogInfo("WKSR menu test: done."));

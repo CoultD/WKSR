@@ -586,9 +586,7 @@ namespace WKRace.Client
         public string CopyText { get { return DateTime.UtcNow < _copiedUntil ? "COPIED!" : "COPY CODE"; } }
 
         public string RatingText { get { return _rating == 0 ? "----" : _rating.ToString(CultureInfo.InvariantCulture); } }
-        // New players' ratings move twice as fast for their first 10 ranked races (the server's provisional K).
-        public string RecordText { get { return _rating == 0 ? "" : _wins + "W  " + _losses + "L" + (_wins + _losses < ProvisionalGames ? "  PROVISIONAL" : ""); } }
-        private const int ProvisionalGames = 10;
+        public string RecordText { get { return _rating == 0 ? "" : _wins + "W  " + _losses + "L"; } }
 
         public void Shutdown()
         {

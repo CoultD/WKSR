@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Input;
 using Imui.Controls;
 using Imui.Core;
@@ -108,7 +109,7 @@ namespace WKRace.Mod
         public static void Open()
         {
             if (_window == null) return;
-            _window.Show(WksrWindow.Page.Main);
+            _window.Home();
             _window.isOpen = true;
         }
 
@@ -206,6 +207,23 @@ namespace WKRace.Mod
         private static readonly Color32 Red = new Color32(0xD9, 0x57, 0x3B, 255);
 
         private Page _page = Page.Main;
+        // The pages that led to this one: BACK returns to the last of them.
+        private readonly Stack<Page> _history = new Stack<Page>();
+
+        // The first page, with nothing to go back to.
+        public void Home()
+        {
+            _history.Clear();
+            Show(Page.Main);
+        }
+
+        // To another page from this one (BACK comes back here).
+        private void Go(Page page)
+        {
+            if (page == _page) return;
+            _history.Push(_page);
+            Show(page);
+        }
 
         public void Show(Page page)
         {
@@ -267,8 +285,8 @@ namespace WKRace.Mod
             bool steam = vm.SteamMode;
             // Offline (neither CONNECT nor STEAM LOBBIES pressed): only what needs no server.
             bool offline = !vm.WantsOnline && !steam;
-            if (steam && (_page == Page.Ranked || _page == Page.Boards)) _page = Page.Main;
-            if (offline && _page != Page.Main && _page != Page.Unranked && _page != Page.Replays && _page != Page.Segments) _page = Page.Main;
+            if (steam && (_page == Page.Ranked || _page == Page.Boards)) Home();
+            if (offline && _page != Page.Main && _page != Page.Unranked && _page != Page.Replays && _page != Page.Segments) Home();
             if (steam) SteamHeader(gui, vm);
             else Header(gui, vm, offline);
 
@@ -295,17 +313,13 @@ namespace WKRace.Mod
                 }
                 gui.AddSpacing(16f);
                 gui.BeginHorizontal();
-                // BACK: from a mode's page to the three modes, and from there to the game's main menu.
+                // BACK: to the page this one was opened from, one step at a time. The first page has none (the
+                // window's X closes the window).
                 bool main = _page == Page.Main;
-                if (gui.Button("BACK", new ImSize(160f, 40f)))
-                {
-                    if (main) isOpen = false;
-                    else _page = _page == Page.Replays ? Page.Unranked : _page == Page.Browse ? Page.Lobby : Page.Main;
-                }
+                if (!main && gui.Button("BACK", new ImSize(160f, 40f))) Show(_history.Count > 0 ? _history.Pop() : Page.Main);
                 // At the bottom of the first page: the match server (CONNECT) or Steam lobbies, and back offline.
                 if (main)
                 {
-                    gui.AddSpacing(Gap);
                     if (offline)
                     {
                         if (gui.Button("CONNECT", new ImSize(200f, 40f))) vm.GoOnline();
@@ -346,16 +360,22 @@ namespace WKRace.Mod
             gui.Separator();
         }
 
-        // The first page before CONNECT: what needs no server (unranked solo runs, of the whole climb or a segment).
+        // The first page before CONNECT or STEAM LOBBIES: what needs no server (unranked solo runs, of the whole climb
+        // or a segment), and what the two ways of playing with others are (their buttons are at the bottom).
         private void OfflineMain(ImGui gui)
         {
-            Title(gui, "WHITE KNUCKLE SPEEDRUN", "UNRANKED is solo, with your own rules. SEGMENTS is a solo run of one part of the climb. Both work offline. CONNECT signs in to the match server for RANKED, LOBBY, the LEADERBOARDS and segment runs that count for them. STEAM LOBBIES plays with others in lobbies the players host through Steam, without the match server: nothing is ranked there.");
+            Title(gui, "WHITE KNUCKLE SPEEDRUN", "UNRANKED is solo, with your own rules. SEGMENTS is a solo run of one part of the climb. Both work offline.");
             gui.BeginHorizontal();
             float half = (gui.GetLayoutWidth() - Gap - 8f) / 2f;
-            if (gui.Button("UNRANKED", new ImSize(half, 150f))) _page = Page.Unranked;
+            if (gui.Button("UNRANKED", new ImSize(half, 90f))) Go(Page.Unranked);
             gui.AddSpacing(Gap);
-            if (gui.Button("SEGMENTS", new ImSize(half, 150f))) _page = Page.Segments;
+            if (gui.Button("SEGMENTS", new ImSize(half, 90f))) Go(Page.Segments);
             gui.EndHorizontal();
+            gui.AddSpacing(12f);
+            gui.Text("PLAY WITH OTHERS: TWO WAYS", Gold);
+            gui.Text("CONNECT: the official WKSR server. Ranked 1v1 and ranked solo with ratings, the leaderboards, lobbies (1v1 and party), the lobby browser and the Global chat.", true);
+            gui.AddSpacing(6f);
+            gui.Text("STEAM LOBBIES: through Steam, without the WKSR server. A player opens a lobby and their game hosts it; others join from the lobby browser, with the code or a Steam invite. Lobbies (1v1 and party) and unranked runs only: no ratings, no leaderboards, no ranked play and no Global chat. If the host leaves, a match in progress ends without a result.", true);
             gui.AddSpacing(12f);
             gui.Text(OtherModsNote, Gold, true);
         }
@@ -369,21 +389,21 @@ namespace WKRace.Mod
             // The layout adds its own spacing between controls on top of the gaps: leave room for it.
             float half = (gui.GetLayoutWidth() - Gap - 8f) / 2f;
             gui.BeginHorizontal();
-            if (gui.Button("RANKED", new ImSize(half, 96f))) _page = Page.Ranked;
+            if (gui.Button("RANKED", new ImSize(half, 96f))) Go(Page.Ranked);
             gui.AddSpacing(Gap);
-            if (gui.Button("LOBBY", new ImSize(half, 96f))) _page = Page.Lobby;
+            if (gui.Button("LOBBY", new ImSize(half, 96f))) Go(Page.Lobby);
             gui.EndHorizontal();
             gui.AddSpacing(Gap);
             gui.BeginHorizontal();
-            if (gui.Button("UNRANKED", new ImSize(half, 96f))) _page = Page.Unranked;
+            if (gui.Button("UNRANKED", new ImSize(half, 96f))) Go(Page.Unranked);
             gui.AddSpacing(Gap);
-            if (gui.Button("SEGMENTS", new ImSize(half, 96f))) _page = Page.Segments;
+            if (gui.Button("SEGMENTS", new ImSize(half, 96f))) Go(Page.Segments);
             gui.EndHorizontal();
             gui.AddSpacing(Gap);
             gui.BeginHorizontal();
-            if (gui.Button("LEADERBOARDS", new ImSize(half, 56f))) Show(Page.Boards);
+            if (gui.Button("LEADERBOARDS", new ImSize(half, 56f))) Go(Page.Boards);
             gui.AddSpacing(Gap);
-            if (gui.Button("OPTIONS", new ImSize(half, 56f))) Show(Page.Options);
+            if (gui.Button("OPTIONS", new ImSize(half, 56f))) Go(Page.Options);
             gui.EndHorizontal();
         }
 
@@ -512,13 +532,15 @@ namespace WKRace.Mod
                 Command(gui, "PRIVACY NOTICE", vm.PrivacyCommand, new ImSize(240f, 36f));
             }
 
+            gui.AddSpacing(14f);
+            gui.Text("CHAT", Gold);
             if (!vm.SteamMode)
             {
-                gui.AddSpacing(14f);
-                gui.Text("CHAT", Gold);
                 bool autoGlobal = vm.ChatAutoGlobal;
                 if (gui.Checkbox(ref autoGlobal, "JOIN THE GLOBAL CHAT WHEN I CONNECT")) vm.ChatAutoGlobal = autoGlobal;
             }
+            bool preview = vm.ChatPreview;
+            if (gui.Checkbox(ref preview, "SHOW NEW CHAT LINES AT THE BOTTOM WHILE THE CHAT IS CLOSED")) vm.ChatPreview = preview;
         }
 
         private static void Key(ImGui gui, MainViewModel vm, string label, string action)
@@ -584,7 +606,7 @@ namespace WKRace.Mod
                 gui.AddSpacing(14f);
                 gui.Text("LOBBY BROWSER", Gold);
                 gui.Text("The public lobbies of players on your version.", true);
-                if (gui.Button("BROWSE LOBBIES", new ImSize(half, 44f))) Show(Page.Browse);
+                if (gui.Button("BROWSE LOBBIES", new ImSize(half, 44f))) Go(Page.Browse);
             }
             gui.EndVertical();
 
@@ -636,7 +658,7 @@ namespace WKRace.Mod
             gui.AddSpacing(6f);
             Rules(gui, vm.PracticeRules);
             gui.AddSpacing(10f);
-            if (gui.Button("SAVED REPLAYS", new ImSize(220f, 36f))) Show(Page.Replays);
+            if (gui.Button("SAVED REPLAYS", new ImSize(220f, 36f))) Go(Page.Replays);
         }
 
         // ---- segments ---------------------------------------------------------------------------------------------
@@ -647,7 +669,8 @@ namespace WKRace.Mod
         // connection the run counts for the segment's leaderboard; anything else is an unranked run, and says so.
         private void SegmentRuns(ImGui gui, MainViewModel vm, bool offline)
         {
-            Title(gui, "SEGMENTS", "A solo run of one part of the climb: the clock stops where the segment ends. Every segment has a leaderboard of its own (LEADERBOARDS, SEGMENTS).");
+            Title(gui, "SEGMENTS", vm.SteamMode ? "A solo run of one part of the climb: the clock stops where the segment ends."
+                : "A solo run of one part of the climb: the clock stops where the segment ends. Every segment has a leaderboard of its own (LEADERBOARDS, SEGMENTS).");
             bool asRanked = true;
             foreach (WKRace.Protocol.SegmentInfo segment in WKRace.Protocol.Segments.All)
             {
@@ -678,7 +701,7 @@ namespace WKRace.Mod
             gui.AddSpacing(8f);
 
             if (vm.SteamMode)
-                gui.Text("Segment runs are unranked in Steam lobbies (there are no leaderboards): nothing is uploaded.", Dim, true);
+                gui.Text("Segment runs are unranked here: nothing is uploaded.", Dim, true);
             else if (offline)
                 gui.Text("Offline: segment runs are unranked and nothing is uploaded. CONNECT on the first page for runs that count for the leaderboards.", Dim, true);
             else if (!asRanked)

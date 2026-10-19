@@ -310,7 +310,7 @@ namespace WKRace.Tests
         }
 
         [Fact]
-        public void RatingBoard_ListsPlayersPastTheirProvisionalMatches_WhoPlayedRankedSinceItExists()
+        public void RatingBoard_ListsEveryPlayerWhoPlayedRankedSinceItExists()
         {
             using (var h = new Harness())
             {
@@ -325,14 +325,15 @@ namespace WKRace.Tests
                 h.Advance(5000);
                 Assert.Equal(MatchOutcome.Win, a.Result.Outcome);
 
-                // Alpha (31 wins now) is listed; Bravo has played one match and is still provisional.
+                // Both are listed after their first ranked match: Alpha (31 wins now) above Bravo.
                 h.Advance(6000);
                 BoardPage page = Page(h, b, BoardKind.Rating);
-                BoardRow row = page.Rows.Single();
-                Assert.Equal("Alpha", row.Name);
-                Assert.Equal(a.Result.NewRating, row.Value);
-                Assert.Equal("31W 0L", row.Detail);
-                Assert.Equal(0, page.YourRank);
+                Assert.Equal(2, page.Rows.Count);
+                Assert.Equal("Alpha", page.Rows[0].Name);
+                Assert.Equal(a.Result.NewRating, page.Rows[0].Value);
+                Assert.Equal("31W 0L", page.Rows[0].Detail);
+                Assert.Equal("Bravo", page.Rows[1].Name);
+                Assert.Equal("0W 1L", page.Rows[1].Detail);
             }
         }
 

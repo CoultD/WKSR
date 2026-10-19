@@ -7,9 +7,9 @@ namespace WKRace.Server
 {
     // The leaderboards.
     //
-    //   Rating     ranked 1v1: the players' ratings. Only players who are past their provisional matches and have
-    //              played a ranked match since the boards exist are listed (older players never agreed to a public
-    //              list; their first ranked match on this version puts them on it).
+    //   Rating     ranked 1v1: the players' ratings. Players who have played a ranked match since the boards exist
+    //              are listed (older players never agreed to a public list; their first ranked match on this version
+    //              puts them on it).
     //   DuelTime   ranked 1v1: each player's fastest finished run.
     //   SoloTime   ranked solo: each player's fastest finished run.
     //   segments   one board per segment (Segments.Board): each player's fastest ranked run of that segment.
@@ -220,7 +220,7 @@ namespace WKRace.Server
             view = new List<BoardEntry>();
             if (kind == BoardKind.Rating)
             {
-                foreach (PlayerRecord p in _store.All().Where(p => !p.Banned && !p.Provisional && _boardPlayers.Contains(p.Id))
+                foreach (PlayerRecord p in _store.All().Where(p => !p.Banned && _boardPlayers.Contains(p.Id))
                              .OrderByDescending(p => p.Rating).ThenByDescending(p => p.Wins).ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
                     view.Add(new BoardEntry { Id = p.Id, Name = p.Name, Value = p.Rating, Detail = p.Wins + "W " + p.Losses + "L" });
             }

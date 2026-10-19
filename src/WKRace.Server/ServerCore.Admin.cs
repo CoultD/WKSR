@@ -124,7 +124,6 @@ namespace WKRace.Server
             var notes = new List<string>();
             if (p.Banned) notes.Add("BANNED");
             if (p.NameLocked) notes.Add("name locked");
-            if (p.Provisional) notes.Add("provisional");
             Player online;
             if (_players.TryGetValue(p.Id, out online) && online.Conn != null) notes.Add(online.Match != null ? "in a match" : "online");
             return string.Format(CultureInfo.InvariantCulture, "{0,-10} {1,-24} {2,6} {3,9} {4,-6} {5,-16} {6}",
@@ -137,7 +136,7 @@ namespace WKRace.Server
         {
             return "Id:        " + p.Id + "\n" +
                    "Name:      " + p.Name + (p.NameLocked ? " (locked by an admin)" : "") + "\n" +
-                   "Rating:    " + p.Rating + (p.Provisional ? " (provisional)" : "") + "   " + p.Wins + " wins, " + p.Losses + " losses" +
+                   "Rating:    " + p.Rating + "   " + p.Wins + " wins, " + p.Losses + " losses" +
                    (p.BestTimeMs >= 0 ? "   best " + RaceFormat.Time(p.BestTimeMs) : "") + "\n" +
                    "Steam:     " + (p.SteamHash != null ? "linked" : "not linked") + "\n" +
                    "Created:   " + Utc(p.CreatedUnixMs) + "   last seen " + Utc(p.LastSeenUnixMs) + "\n" +

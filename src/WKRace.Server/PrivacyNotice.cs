@@ -76,7 +76,7 @@ namespace WKRace.Server
 
                    "<h2>What other players can see</h2>" +
                    "<p>The leaderboards in WKSR can be read by everyone who uses this server. They show your <b>name</b>; your " +
-                   "<b>rating</b> with your wins and losses, once you are past your first " + Elo.ProvisionalGames + " ranked matches; " +
+                   "<b>rating</b> with your wins and losses; " +
                    "your <b>fastest times</b> with the version they were played on; and, for the 20 fastest times of a leaderboard, " +
                    "the <b>replay</b>, which other players can download and run against as a ghost. You are only listed once you have " +
                    "played ranked on version 0.9.1 or later. Lobby matches and unranked runs are never listed. Replays you save " +
