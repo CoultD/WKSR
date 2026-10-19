@@ -94,6 +94,9 @@ namespace WKRace.Protocol
                 case MessageType.LobbyList: m = LobbyList.Read(r); break;
                 case MessageType.ChatTyping: m = ChatTyping.Read(r); break;
                 case MessageType.ChatTypingNote: m = ChatTypingNote.Read(r); break;
+                case MessageType.EndRun: m = EndRun.Read(r); break;
+                case MessageType.LastStanding: m = LastStanding.Read(r); break;
+                case MessageType.LobbyOptions: m = LobbyOptions.Read(r); break;
                 case MessageType.VoiceHello: m = VoiceHello.Read(r); break;
                 case MessageType.VoiceState: m = VoiceState.Read(r); break;
                 case MessageType.VoicePeers: m = VoicePeers.Read(r); break;

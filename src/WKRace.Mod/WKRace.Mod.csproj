@@ -25,7 +25,7 @@
     <!-- STEAM LOBBIES: the lobby's host runs the match server's core in their game (Steam/Host). Named one by one, so
          a new server file never lands in the game by accident; what the core needs from the server's storage and its
          ranked-only parts is stood in for by Steam/Host/HostStandIns.cs. -->
-    <Compile Include="..\WKRace.Server\ServerCore.cs;..\WKRace.Server\ServerCore.Lobby.cs;..\WKRace.Server\ServerCore.Match.cs;..\WKRace.Server\ServerCore.Party.cs;..\WKRace.Server\ServerCore.Bans.cs;..\WKRace.Server\ServerCore.Chat.cs;..\WKRace.Server\ServerCore.Browser.cs;..\WKRace.Server\Model.cs;..\WKRace.Server\PlayerRecord.cs;..\WKRace.Server\ServerOptions.cs;..\WKRace.Server\LogAddress.cs;..\WKRace.Server\TimerWatch.cs" LinkBase="Server" />
+    <Compile Include="..\WKRace.Server\ServerCore.cs;..\WKRace.Server\ServerCore.Lobby.cs;..\WKRace.Server\ServerCore.Match.cs;..\WKRace.Server\ServerCore.Party.cs;..\WKRace.Server\ServerCore.Bans.cs;..\WKRace.Server\ServerCore.Chat.cs;..\WKRace.Server\ServerCore.Browser.cs;..\WKRace.Server\ServerCore.KeepRunning.cs;..\WKRace.Server\Model.cs;..\WKRace.Server\PlayerRecord.cs;..\WKRace.Server\ServerOptions.cs;..\WKRace.Server\LogAddress.cs;..\WKRace.Server\TimerWatch.cs" LinkBase="Server" />
   </ItemGroup>
 
   <ItemGroup>

@@ -263,6 +263,8 @@ namespace WKRace.Server
                 Racing = lobby.Match != null,
                 AllowUnapproved = lobby.AllowUnapproved,
                 Segment = lobby.Segment,
+                OptionsKnown = BuildTag.AtLeast(to.ClientVersion, KeepRunningVersion),
+                LetLastFinish = lobby.LetLastFinish,
                 ExpiresInSeconds = lobby.Match == null && lobby.Members.Count <= 1 && lobby.AloneSinceMs >= 0
                     ? (int)Math.Max(0, (_options.LobbyTimeoutSeconds * 1000L - (now - lobby.AloneSinceMs)) / 1000) : -1,
             };

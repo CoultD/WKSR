@@ -74,11 +74,15 @@ namespace WKRace.Protocol
         LobbyList = 75,
         ChatTyping = 76,
         ChatTypingNote = 77,
+        // Keep running after a win (WinMessages.cs).
+        EndRun = 78,
+        LastStanding = 79,
 
         VoiceHello = 80,
         VoiceState = 81,
         VoicePeers = 82,
         VoiceActivity = 83,
+        LobbyOptions = 84,
 
         BoardRequest = 90,
         BoardPage = 91,
@@ -995,6 +999,9 @@ namespace WKRace.Protocol
         // Party races: this player's place (1 = first; 0 in a 1v1) and everyone's, in order.
         public int Place;
         public List<Standing> Standings = new List<Standing>();
+        // A 1v1 won because the opponent died: the winner may keep running (their finish still counts for the
+        // leaderboard) or end the run (EndRun). Written last and only when set, so only 0.9.7 on ever gets it.
+        public bool KeepRunning;
 
         public override MessageType Type { get { return MessageType.MatchResult; } }
 
@@ -1010,6 +1017,7 @@ namespace WKRace.Protocol
             w.WriteByte((byte)End);
             w.WriteByte((byte)Place);
             Standing.WriteList(w, Standings);
+            if (KeepRunning) w.WriteBool(true);
         }
 
         public static MatchResult Read(PacketReader r)
@@ -1025,6 +1033,7 @@ namespace WKRace.Protocol
             m.End = (MatchEnd)r.ReadByte();
             m.Place = r.ReadByte();
             m.Standings = Standing.ReadList(r);
+            m.KeepRunning = r.Remaining > 0 && r.ReadBool();
             return m;
         }
     }

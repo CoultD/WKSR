@@ -111,6 +111,8 @@ namespace WKRace.Server
         public bool Public;
         // The segment its matches play (Segments), 0: the whole climb.
         public byte Segment;
+        // The last player still running may finish their run after the others are out (the host's choice).
+        public bool LetLastFinish = true;
         public string GameBuild = "";
         public long CreatedMs;
         // Since when the host has been on their own (the lobby expires after LobbyTimeoutSeconds of that), or -1.
@@ -166,6 +168,8 @@ namespace WKRace.Server
         public readonly Dictionary<int, SplitReached> Splits = new Dictionary<int, SplitReached>();
         // The artifacts this player's game offers, once reported (ban phase).
         public List<string> BanPool;
+        // Party: this player was told they are the last one standing (LastStanding).
+        public bool LastStandingSent;
 
         // Still racing: neither finished nor out.
         public bool Active { get { return !Finished && !Out && !Forfeited && !Died && !Cheated; } }
@@ -180,6 +184,11 @@ namespace WKRace.Server
         public MatchRules Rules;
         // A segment match (Segments): it ends at the segment's end. 0: the whole climb.
         public byte Segment;
+        // Keep running after a win: allowed in this match (ranked always, a lobby's by its host's choice).
+        public bool LetLastFinish = true;
+        // A 1v1 decided by a death whose winner keeps running: their slot, until they finish, die or end the run.
+        // The match is Completed (the result is out) but stays listed for that run.
+        public Slot Survivor;
         // The lobby the race was started from (friendly races), or null (ranked).
         public Lobby Lobby;
         public long CreatedMs;

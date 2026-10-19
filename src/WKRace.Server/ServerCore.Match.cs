@@ -48,6 +48,7 @@ namespace WKRace.Server
                 Mode = mode,
                 Rules = rules,
                 Segment = segment,
+                LetLastFinish = ranked || lobby == null || lobby.LetLastFinish,
                 Lobby = lobby,
                 Seed = RandomNumberGenerator.GetInt32(ProtocolConstants.MinSeed, ProtocolConstants.MaxSeed + 1),
                 CreatedMs = now,
@@ -421,6 +422,14 @@ namespace WKRace.Server
         {
             Match match = player.Match;
             if (match == null) return;
+            Slot survivor = SurvivorOf(match, player);
+            if (survivor != null)
+            {
+                // Nobody to pass it on to; kept for the run's replay and its timer.
+                if (state.RaceTimeMs > survivor.GameMs) survivor.GameMs = state.RaceTimeMs;
+                survivor.Recorder?.Add(state);
+                return;
+            }
             Promote(match);
             if (match.Phase != MatchPhase.Running && match.Phase != MatchPhase.Settling) return;
 
@@ -491,6 +500,11 @@ namespace WKRace.Server
         {
             Match match = player.Match;
             if (match == null) return;
+            if (SurvivorOf(match, player) != null)
+            {
+                SurvivorFinished(match, finished);
+                return;
+            }
             Promote(match);
             if (match.Phase != MatchPhase.Running && match.Phase != MatchPhase.Settling) return;
 
@@ -571,7 +585,13 @@ namespace WKRace.Server
         private void HandleForfeit(Player player)
         {
             Match match = player.Match;
-            if (match == null || match.Phase == MatchPhase.Completed) return;
+            if (match == null) return;
+            if (SurvivorOf(match, player) != null)
+            {
+                EndSurvivor(match, "ended their run");
+                return;
+            }
+            if (match.Phase == MatchPhase.Completed) return;
 
             Slot slot = match.SlotOf(player);
             if (match.Party)
@@ -595,6 +615,11 @@ namespace WKRace.Server
         {
             Match match = player.Match;
             if (match == null) return;
+            if (SurvivorOf(match, player) != null)
+            {
+                EndSurvivor(match, "died after the win");
+                return;
+            }
             Promote(match);
             if (match.Phase != MatchPhase.Running && match.Phase != MatchPhase.Settling) return;
 
@@ -607,7 +632,10 @@ namespace WKRace.Server
                 return;
             }
             slot.Died = true;
-            Complete(match, match.Other(slot), false, slot.Name + (slot.DeathText.Length > 0 ? " died: " + slot.DeathText + "." : " died."), MatchEnd.Death);
+            Slot survivor = match.Other(slot);
+            // Keep running after a win: the survivor (if their client knows it) gets the result now and may finish.
+            bool keepRunning = match.LetLastFinish && survivor.Active && survivor.Player.Conn != null && BuildTag.AtLeast(survivor.Player.ClientVersion, KeepRunningVersion);
+            Complete(match, survivor, false, slot.Name + (slot.DeathText.Length > 0 ? " died: " + slot.DeathText + "." : " died."), MatchEnd.Death, keepRunning);
         }
 
         // The game's death line, from the player's mod: printable, no rich-text tags, short.
@@ -751,7 +779,7 @@ namespace WKRace.Server
 
         // A 1v1 ends here. winner == null ends the match without a result for either side; aborted == true skips
         // rating changes.
-        private void Complete(Match match, Slot winner, bool aborted, string reason, MatchEnd end = MatchEnd.Other)
+        private void Complete(Match match, Slot winner, bool aborted, string reason, MatchEnd end = MatchEnd.Other, bool keepRunning = false)
         {
             if (match.Phase == MatchPhase.Completed) return;
             if (match.Party)
@@ -798,17 +826,27 @@ namespace WKRace.Server
             Deliver(a, new MatchResult
             {
                 MatchId = match.Id, Outcome = outcomeA, YourTimeMs = a.FinishMs, OpponentTimeMs = b.FinishMs,
-                OldRating = oldA, NewRating = a.Player.Record.Rating, Reason = reason, End = end,
+                OldRating = oldA, NewRating = a.Player.Record.Rating, Reason = reason, End = end, KeepRunning = keepRunning && winner == a,
             });
             Deliver(b, new MatchResult
             {
                 MatchId = match.Id, Outcome = outcomeB, YourTimeMs = b.FinishMs, OpponentTimeMs = a.FinishMs,
-                OldRating = oldB, NewRating = b.Player.Record.Rating, Reason = reason, End = end,
+                OldRating = oldB, NewRating = b.Player.Record.Rating, Reason = reason, End = end, KeepRunning = keepRunning && winner == b,
             });
 
-            a.Player.Match = null;
-            b.Player.Match = null;
-            _matches.Remove(match.Id);
+            if (keepRunning && winner != null)
+            {
+                // The winner's run goes on: the match stays listed (and the lobby racing) until it ends (EndSurvivor).
+                match.Survivor = winner;
+                match.Other(winner).Player.Match = null;
+                _log("match " + Short(match) + ": " + winner.Name + " keeps running after the win");
+            }
+            else
+            {
+                a.Player.Match = null;
+                b.Player.Match = null;
+                _matches.Remove(match.Id);
+            }
             SendVoicePeers(new[] { a.Player, b.Player });
             _log("match " + Short(match) + " complete: " + reason);
 
@@ -827,7 +865,7 @@ namespace WKRace.Server
                 A = new MatchSide { Id = a.Player.Id, Name = a.Name, Outcome = outcomeA.ToString(), TimeMs = a.FinishMs, Rating = a.Player.Record.Rating },
                 B = new MatchSide { Id = b.Player.Id, Name = b.Name, Outcome = outcomeB.ToString(), TimeMs = b.FinishMs, Rating = b.Player.Record.Rating },
             });
-            ReturnToLobby(match);
+            if (match.Survivor == null) ReturnToLobby(match);
         }
 
         private static void Credit(Slot slot, MatchOutcome outcome)

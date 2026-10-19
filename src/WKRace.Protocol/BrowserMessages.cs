@@ -17,6 +17,8 @@ namespace WKRace.Protocol
         public bool ChatTyping;
         // Lobbies can play a segment (LobbyCreate.Segment).
         public bool LobbySegments;
+        // Keep running after a win, and the lobby option for it (LobbyOptions, EndRun).
+        public bool KeepRunning;
 
         public override MessageType Type { get { return MessageType.ServerFeatures; } }
 
@@ -24,10 +26,11 @@ namespace WKRace.Protocol
         {
             w.WriteBool(LobbyBrowser);
             // The 0.9.7 flags, both or neither (a 0.9.6 client reads only the first byte, and skips the rest).
-            if (ChatTyping || LobbySegments)
+            if (ChatTyping || LobbySegments || KeepRunning)
             {
                 w.WriteBool(ChatTyping);
                 w.WriteBool(LobbySegments);
+                w.WriteBool(KeepRunning);
             }
         }
 
@@ -36,6 +39,7 @@ namespace WKRace.Protocol
             var m = new ServerFeatures { LobbyBrowser = r.ReadBool() };
             if (r.Remaining > 0) m.ChatTyping = r.ReadBool();
             if (r.Remaining > 0) m.LobbySegments = r.ReadBool();
+            if (r.Remaining > 0) m.KeepRunning = r.ReadBool();
             // Features of later versions.
             while (r.Remaining > 0) r.ReadByte();
             return m;

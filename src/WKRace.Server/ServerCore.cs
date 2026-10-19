@@ -118,6 +118,12 @@ namespace WKRace.Server
                 case ChatTyping typing:
                     HandleChatTyping(player, typing);
                     break;
+                case EndRun endRun:
+                    HandleEndRun(player, endRun);
+                    break;
+                case LobbyOptions lobbyOptions:
+                    HandleLobbyOptions(player, lobbyOptions);
+                    break;
                 case VoiceState voiceState:
                     HandleVoiceState(player, voiceState);
                     break;
@@ -193,7 +199,13 @@ namespace WKRace.Server
             if (player.Match == null) LeaveLobby(player, null);
 
             Match match = player.Match;
-            if (match != null && match.Phase != MatchPhase.Completed)
+            if (match != null && SurvivorOf(match, player) != null)
+            {
+                // A survivor who leaves ends their run after the win.
+                EndSurvivor(match, "left after the win");
+                if (player.PendingResult == null) _players.Remove(player.Id);
+            }
+            else if (match != null && match.Phase != MatchPhase.Completed)
             {
                 UpdatePresence(match);
             }
@@ -207,6 +219,7 @@ namespace WKRace.Server
         {
             long now = _now();
             TickMatches(now);
+            TickSurvivors(now);
             TickSolo(now);
             ExpireLobbies(now);
             Matchmake();

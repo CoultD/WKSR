@@ -50,6 +50,9 @@ namespace WKRace.Protocol
         public int Splits = 288;    // F7
         public int Ghost = 287;     // F6
         public int Chat = DefaultChat;
+        // After a win: "-" ends the run, "+" keeps running (the prompt goes away).
+        public int EndRun = 45;        // Minus
+        public int KeepRunning = 61;   // Equals ("=" / "+")
 
         // F8. The chat is opened and closed with the same key, so it cannot be a key that types a character.
         public const int DefaultChat = 289;
@@ -67,16 +70,25 @@ namespace WKRace.Protocol
             w.WriteInt32(Splits);
             w.WriteInt32(Ghost);
             w.WriteInt32(Chat);
+            w.WriteInt32(EndRun);
+            w.WriteInt32(KeepRunning);
         }
 
         public static KeyBindings Read(PacketReader r)
         {
-            return new KeyBindings { Ready = r.ReadInt32(), Forfeit = r.ReadInt32(), Splits = r.ReadInt32(), Ghost = r.ReadInt32(), Chat = r.ReadInt32() };
+            var k = new KeyBindings { Ready = r.ReadInt32(), Forfeit = r.ReadInt32(), Splits = r.ReadInt32(), Ghost = r.ReadInt32(), Chat = r.ReadInt32() };
+            if (r.Remaining >= 8)
+            {
+                k.EndRun = r.ReadInt32();
+                k.KeepRunning = r.ReadInt32();
+            }
+            return k;
         }
 
         public bool Same(KeyBindings other)
         {
-            return other != null && Ready == other.Ready && Forfeit == other.Forfeit && Splits == other.Splits && Ghost == other.Ghost && Chat == other.Chat;
+            return other != null && Ready == other.Ready && Forfeit == other.Forfeit && Splits == other.Splits && Ghost == other.Ghost && Chat == other.Chat
+                && EndRun == other.EndRun && KeepRunning == other.KeepRunning;
         }
 
         public KeyBindings Clone()

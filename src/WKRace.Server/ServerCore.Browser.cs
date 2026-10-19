@@ -24,6 +24,7 @@ namespace WKRace.Server
                 LobbyBrowser = true,
                 ChatTyping = BuildTag.AtLeast(player.ClientVersion, TypingVersion),
                 LobbySegments = BuildTag.AtLeast(player.ClientVersion, SegmentsVersion),
+                KeepRunning = BuildTag.AtLeast(player.ClientVersion, KeepRunningVersion),
             });
         }
 

@@ -95,6 +95,7 @@ namespace WKRace.Server
                 CompleteParty(match, "Everyone has finished or is out.", false);
                 return;
             }
+            if (active.Count == 1 && CheckLastStanding(match, active[0])) return;
             if (match.PartyDeadlineMs >= 0 && now >= match.PartyDeadlineMs)
             {
                 CompleteParty(match, "Time is up: " + WindowText() + " after the first finish.", false);

@@ -62,6 +62,10 @@ namespace WKRace.Protocol
         // The segment the lobby plays (0: the whole climb). Written last and only when set: only players from 0.9.7
         // on are ever in a segment lobby.
         public byte Segment;
+        // The lobby's options (LobbyOptions). OptionsKnown: the receiving client knows them (0.9.7 on); the server
+        // sets it per player, and only then are they written (after Segment).
+        public bool OptionsKnown;
+        public bool LetLastFinish = true;
 
         public override MessageType Type { get { return MessageType.LobbyState; } }
 
@@ -84,7 +88,8 @@ namespace WKRace.Protocol
                 w.WriteBool(m.Host);
                 w.WriteBool(m.Racing);
             }
-            if (Segment != 0) w.WriteByte(Segment);
+            if (Segment != 0 || OptionsKnown) w.WriteByte(Segment);
+            if (OptionsKnown) w.WriteByte((byte)(LetLastFinish ? 1 : 0));
         }
 
         public static LobbyState Read(PacketReader r)
@@ -112,6 +117,11 @@ namespace WKRace.Protocol
                 });
             }
             m.Segment = r.Remaining > 0 ? r.ReadByte() : (byte)0;
+            if (r.Remaining > 0)
+            {
+                m.OptionsKnown = true;
+                m.LetLastFinish = (r.ReadByte() & 1) != 0;
+            }
             return m;
         }
     }
