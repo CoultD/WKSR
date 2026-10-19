@@ -56,17 +56,20 @@ namespace WKRace.Server
 
             MatchRules rules = create.Rules & MatchRules.All;
             if (create.Mode == MatchMode.Party) rules &= ~MatchRules.ArtifactBans;
+            // A segment lobby (an unknown segment is the whole climb); its matches end at the segment's end.
+            SegmentInfo segment = Segments.Find(create.Segment);
+            if (segment != null && !segment.Artifacts) rules &= ~MatchRules.ArtifactBans;
             long now = _now();
             var lobby = new Lobby
             {
-                Id = id, Host = player, Mode = create.Mode, Rules = rules, AllowUnapproved = create.AllowUnapproved,
+                Id = id, Host = player, Mode = create.Mode, Rules = rules, AllowUnapproved = create.AllowUnapproved, Segment = segment != null ? segment.Id : Segments.None,
                 GameBuild = create.GameBuild ?? "", CreatedMs = now, AloneSinceMs = now,
             };
             lobby.Members.Add(player);
             _lobbies[id] = lobby;
             player.Lobby = lobby;
             player.GameBuild = create.GameBuild ?? "";
-            _log(player.Record.Name + " opened a " + RulesText.Mode(lobby.Mode) + " lobby (" + rules + (lobby.AllowUnapproved ? ", unapproved mods allowed" : "") + ")");
+            _log(player.Record.Name + " opened a " + RulesText.Mode(lobby.Mode) + " lobby (" + rules + (lobby.AllowUnapproved ? ", unapproved mods allowed" : "") + (segment != null ? ", segment " + segment.Name : "") + ")");
             player.Send(new LobbyCreated { LobbyId = id, PublicAddress = _options.PublicAddress ?? "", ExpiresInSeconds = _options.LobbyTimeoutSeconds });
             SendLobbyState(lobby, player, now);
         }
@@ -103,6 +106,12 @@ namespace WKRace.Server
             {
                 player.Send(new ErrorMessage(ErrorCode.LobbyFull, lobby.Mode == MatchMode.Party
                     ? "That party lobby is full (" + lobby.MaxPlayers + " players)." : "That 1v1 lobby already has two players."));
+                return;
+            }
+            // Players from before 0.9.7 cannot play a segment match (in Steam lobbies they can meet newer ones).
+            if (lobby.Segment != Segments.None && !BuildTag.AtLeast(player.ClientVersion, SegmentsVersion))
+            {
+                player.Send(new ErrorMessage(ErrorCode.LobbyBuildMismatch, "That lobby plays a segment, which needs WK Race " + SegmentsVersion + " or newer. Update the mod."));
                 return;
             }
             if (lobby.Host.Conn == null)
@@ -167,7 +176,7 @@ namespace WKRace.Server
             List<Player> racers = lobby.Members.Where(m => m.Conn != null && m.Match == null).ToList();
             if (racers.Count < 2) return;
             foreach (Player p in racers) RemoveFromQueue(p);
-            lobby.Match = CreateMatch(racers, false, lobby.Mode, lobby.Rules, lobby);
+            lobby.Match = CreateMatch(racers, false, lobby.Mode, lobby.Rules, lobby, lobby.Segment);
             BroadcastLobby(lobby);
         }
 
@@ -253,6 +262,7 @@ namespace WKRace.Server
                 YouAreHost = lobby.Host == to,
                 Racing = lobby.Match != null,
                 AllowUnapproved = lobby.AllowUnapproved,
+                Segment = lobby.Segment,
                 ExpiresInSeconds = lobby.Match == null && lobby.Members.Count <= 1 && lobby.AloneSinceMs >= 0
                     ? (int)Math.Max(0, (_options.LobbyTimeoutSeconds * 1000L - (now - lobby.AloneSinceMs)) / 1000) : -1,
             };

@@ -501,6 +501,9 @@ namespace WKRace.Protocol
         public MatchRules Rules = MatchRules.Ranked;
         // Players whose game has mods that are not approved may join (and the host may have them).
         public bool AllowUnapproved;
+        // The lobby plays a segment (Segments) instead of the whole climb, 0: the whole climb. Written only when set,
+        // and only sent to a server that knows it (ServerFeatures.LobbySegments, 0.9.7 on).
+        public byte Segment;
 
         public override MessageType Type { get { return MessageType.LobbyCreate; } }
 
@@ -510,6 +513,7 @@ namespace WKRace.Protocol
             w.WriteByte((byte)Mode);
             w.WriteByte((byte)Rules);
             w.WriteBool(AllowUnapproved);
+            if (Segment != 0) w.WriteByte(Segment);
         }
 
         public static LobbyCreate Read(PacketReader r)
@@ -520,6 +524,7 @@ namespace WKRace.Protocol
                 Mode = ProtocolChecks.LobbyMode(r.ReadByte()),
                 Rules = (MatchRules)(r.ReadByte() & (byte)MatchRules.All),
                 AllowUnapproved = r.ReadBool(),
+                Segment = r.Remaining > 0 ? r.ReadByte() : (byte)0,
             };
         }
     }

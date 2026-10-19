@@ -53,6 +53,8 @@ namespace WKRace.Client
         public bool LobbyUnapproved { get; set; }
         // CREATE LOBBY: listed in the lobby browser (else only joinable with its code).
         public bool LobbyPublic { get; set; } = true;
+        // CREATE LOBBY's segment (Segments), 0: the whole climb.
+        public byte LobbySegment { get; set; }
         // The player chose STEAM LOBBIES (instead of CONNECT) on the WKSR window's first page: kept for the next start.
         public bool SteamLobbies { get; set; }
         public bool SoloUnapproved { get; set; }

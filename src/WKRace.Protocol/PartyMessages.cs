@@ -59,6 +59,9 @@ namespace WKRace.Protocol
         // The host lets in players whose game has mods that are not approved.
         public bool AllowUnapproved;
         public List<LobbyMember> Members = new List<LobbyMember>();
+        // The segment the lobby plays (0: the whole climb). Written last and only when set: only players from 0.9.7
+        // on are ever in a segment lobby.
+        public byte Segment;
 
         public override MessageType Type { get { return MessageType.LobbyState; } }
 
@@ -81,6 +84,7 @@ namespace WKRace.Protocol
                 w.WriteBool(m.Host);
                 w.WriteBool(m.Racing);
             }
+            if (Segment != 0) w.WriteByte(Segment);
         }
 
         public static LobbyState Read(PacketReader r)
@@ -107,6 +111,7 @@ namespace WKRace.Protocol
                     Racing = r.ReadBool(),
                 });
             }
+            m.Segment = r.Remaining > 0 ? r.ReadByte() : (byte)0;
             return m;
         }
     }

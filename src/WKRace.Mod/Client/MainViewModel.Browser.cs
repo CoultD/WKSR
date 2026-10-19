@@ -101,7 +101,7 @@ namespace WKRace.Client
                 {
                     Host = entry.Host,
                     Mode = entry.Mode == MatchMode.Party ? "PARTY" : "1V1",
-                    Rules = RulesText.Describe(entry.Rules),
+                    Rules = SegmentPrefix(entry.Segment) + RulesText.Describe(entry.Rules),
                     Players = entry.Members + "/" + entry.MaxPlayers,
                     State = entry.Racing ? "IN A MATCH" : open ? "OPEN" : "FULL",
                     Brush = open ? Theme.Good : Theme.Muted,

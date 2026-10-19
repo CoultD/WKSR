@@ -33,9 +33,13 @@ namespace WKRace.Server
             return Math.Max(0, elapsed) * MaxTimerFactor + SplitFutureToleranceMs;
         }
 
-        private Match CreateMatch(IList<Player> players, bool ranked, MatchMode mode, MatchRules rules, Lobby lobby)
+        private Match CreateMatch(IList<Player> players, bool ranked, MatchMode mode, MatchRules rules, Lobby lobby, byte segment = Segments.None)
         {
             if (mode == MatchMode.Party) rules &= ~MatchRules.ArtifactBans;
+            // A segment that ends before the artifact room has nothing to ban.
+            SegmentInfo part = Segments.Find(segment);
+            if (part == null) segment = Segments.None;
+            else if (!part.Artifacts) rules &= ~MatchRules.ArtifactBans;
             long now = _now();
             var match = new Match
             {
@@ -43,6 +47,7 @@ namespace WKRace.Server
                 Ranked = ranked,
                 Mode = mode,
                 Rules = rules,
+                Segment = segment,
                 Lobby = lobby,
                 Seed = RandomNumberGenerator.GetInt32(ProtocolConstants.MinSeed, ProtocolConstants.MaxSeed + 1),
                 CreatedMs = now,
@@ -110,6 +115,7 @@ namespace WKRace.Server
                 YourRacer = to.Racer,
                 PlayerCount = match.Slots.Count,
                 ReadySeconds = Math.Max(0, _options.ReadyCheckSeconds),
+                Segment = match.Segment,
             });
         }
 
@@ -553,6 +559,8 @@ namespace WKRace.Server
 
         private string ImplausibleFinish(Slot slot, long raceMs)
         {
+            // The minimums are for the whole climb; a segment is shorter by design.
+            if (slot.Player.Match != null && slot.Player.Match.Segment != Segments.None) return null;
             if (_options.MinFinishSeconds > 0 && raceMs < _options.MinFinishSeconds * 1000L)
                 return "finished after " + RaceFormat.Time(raceMs, 0) + ", under the minimum of " + RaceFormat.Time(_options.MinFinishSeconds * 1000L, 0);
             if (_options.MinFinishSplits > 0 && slot.Splits.Count < _options.MinFinishSplits)

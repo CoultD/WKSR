@@ -130,7 +130,15 @@ namespace WKRace.Mod
                     MatchAgainstTestPlayer(200f);
                     break;
                 case "lobby":
-                    // Without bans, so the match starts as soon as the test player joins.
+                case "segment-lobby":
+                    // Without bans, so the match starts as soon as the test player joins. segment-lobby: the lobby plays the
+                    // first segment (its lobby page is shown with the box ticked first).
+                    if (action == "segment-lobby")
+                    {
+                        Do(() => { Vm.LobbySegmentIndex = 0; Vm.LobbySegmentOn = true; });
+                        Page("menu-3b-lobby-segment", WksrWindow.Page.Lobby, 1.5f);
+                        Do(() => MenuUi.Window.Home());
+                    }
                     Do(() => { Vm.LobbyRules.Bans = false; Vm.LobbyPublic = true; Press(Vm.OpenLobbyCommand, action); });
                     Until("the lobby opening", 10f, () => Vm.ShowLobbyRoom && !string.IsNullOrEmpty(Vm.LobbyCode));
                     // The lobby browser lists it (when the server has the browser).

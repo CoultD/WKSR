@@ -31,6 +31,7 @@ namespace WKRace.Client
         private const string LobbyKeyMax = "wksr_max";
         private const string LobbyKeyRacing = "wksr_racing";
         private const string LobbyKeyPublic = "wksr_public";
+        private const string LobbyKeySegment = "wksr_segment";
         // How long a lost host is waited for before the lobby is given up.
         private const int HostLostGiveUpSeconds = 60;
         // How long the others wait for a new host after the host left.
@@ -58,6 +59,7 @@ namespace WKRace.Client
         // A lobby taken over after a handover: its mode and modifiers (else CREATE LOBBY's picker is used).
         private MatchMode? _takeoverMode;
         private MatchRules _takeoverRules;
+        private byte _takeoverSegment;
 
         // STEAM LOBBIES chosen (instead of CONNECT) on the first page; kept for the next start.
         public bool SteamMode { get { return _settings.SteamLobbies; } }
@@ -202,7 +204,7 @@ namespace WKRace.Client
             _pendingCreate = false;
             if (_takeoverMode.HasValue)
             {
-                _server.Send(new LobbyCreate { GameBuild = MyBuildTag(), Mode = _takeoverMode.Value, Rules = _takeoverRules });
+                _server.Send(new LobbyCreate { GameBuild = MyBuildTag(), Mode = _takeoverMode.Value, Rules = _takeoverRules, Segment = _takeoverSegment });
                 _takeoverMode = null;
                 return;
             }
@@ -271,6 +273,7 @@ namespace WKRace.Client
             lobby.SetData(LobbyKeyPlayers, state.Members.Count.ToString(CultureInfo.InvariantCulture));
             lobby.SetData(LobbyKeyMax, state.MaxPlayers.ToString(CultureInfo.InvariantCulture));
             lobby.SetData(LobbyKeyRacing, state.Racing ? "1" : "0");
+            lobby.SetData(LobbyKeySegment, state.Segment.ToString(CultureInfo.InvariantCulture));
             // Nobody can join a lobby that is racing or full; the code works again afterwards.
             lobby.SetJoinable(!state.Racing && state.Members.Count < state.MaxPlayers);
         }
@@ -401,7 +404,8 @@ namespace WKRace.Client
                 foreach (Lobby lobby in found ?? new Lobby[0])
                 {
                     Lobby captured = lobby;
-                    int mode, rules, players, max;
+                    int mode, rules, players, max, segment;
+                    int.TryParse(lobby.GetData(LobbyKeySegment), NumberStyles.None, CultureInfo.InvariantCulture, out segment);
                     int.TryParse(lobby.GetData(LobbyKeyMode), NumberStyles.None, CultureInfo.InvariantCulture, out mode);
                     int.TryParse(lobby.GetData(LobbyKeyRules), NumberStyles.None, CultureInfo.InvariantCulture, out rules);
                     if (!int.TryParse(lobby.GetData(LobbyKeyPlayers), NumberStyles.None, CultureInfo.InvariantCulture, out players)) players = lobby.MemberCount;
@@ -411,7 +415,7 @@ namespace WKRace.Client
                     {
                         Host = lobby.GetData(LobbyKeyName) ?? "",
                         Mode = (MatchMode)mode == MatchMode.Party ? "PARTY" : "1V1",
-                        Rules = RulesText.Describe((MatchRules)rules),
+                        Rules = SegmentPrefix((byte)segment) + RulesText.Describe((MatchRules)rules),
                         Players = players + "/" + max,
                         State = racing ? "IN A MATCH" : players >= max ? "FULL" : "OPEN",
                         Brush = racing || players >= max ? Theme.Muted : Theme.Good,
@@ -575,9 +579,10 @@ namespace WKRace.Client
         // This player is the lobby's owner now: their game hosts it, with the lobby's mode and modifiers.
         private void TakeOverLobby(Lobby lobby)
         {
-            int mode, rules;
+            int mode, rules, segment;
             int.TryParse(lobby.GetData(LobbyKeyMode), NumberStyles.None, CultureInfo.InvariantCulture, out mode);
             int.TryParse(lobby.GetData(LobbyKeyRules), NumberStyles.None, CultureInfo.InvariantCulture, out rules);
+            int.TryParse(lobby.GetData(LobbyKeySegment), NumberStyles.None, CultureInfo.InvariantCulture, out segment);
             _handoverFrom = 0;
             _host = new LobbyHost(s => WKRace.Mod.Plugin.Log.LogInfo(s));
             string problem = _host.Start(WKRace.Mod.RaceConfig.HostTcpPort.Value);
@@ -590,6 +595,7 @@ namespace WKRace.Client
             _hostSteamId = 0;
             _takeoverMode = (MatchMode)mode;
             _takeoverRules = (MatchRules)rules;
+            _takeoverSegment = (byte)segment;
             _pendingCreate = true;
             ConnectToServer();
             LobbyText = "You host the lobby now.";

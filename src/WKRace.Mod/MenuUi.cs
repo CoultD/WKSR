@@ -584,6 +584,20 @@ namespace WKRace.Mod
             gui.BeginVertical(half);
             gui.Text("CREATE LOBBY", Gold);
             Rules(gui, vm.LobbyRules);
+            if (vm.HasLobbySegments)
+            {
+                // SEGMENT: the lobby's matches play one part of the climb, picked in the dropdown next to the box.
+                gui.BeginHorizontal();
+                bool segmentOn = vm.LobbySegmentOn;
+                if (gui.Checkbox(ref segmentOn, "SEGMENT")) vm.LobbySegmentOn = segmentOn;
+                gui.AddSpacing(Gap);
+                gui.BeginReadOnly(!vm.LobbySegmentOn);
+                int segment = vm.LobbySegmentIndex;
+                if (gui.Dropdown(ref segment, vm.SegmentNames, new ImSize(200f, 32f))) vm.LobbySegmentIndex = segment;
+                gui.EndReadOnly();
+                gui.EndHorizontal();
+                if (vm.LobbySegmentOn) gui.Text(vm.LobbySegmentNote, Dim, true);
+            }
             if (vm.HasLobbyBrowser)
             {
                 bool listed = vm.LobbyPublic;

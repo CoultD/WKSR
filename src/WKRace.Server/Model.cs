@@ -109,6 +109,8 @@ namespace WKRace.Server
         public bool AllowUnapproved;
         // Listed in the lobby browser (the host's choice); otherwise joined with the code only.
         public bool Public;
+        // The segment its matches play (Segments), 0: the whole climb.
+        public byte Segment;
         public string GameBuild = "";
         public long CreatedMs;
         // Since when the host has been on their own (the lobby expires after LobbyTimeoutSeconds of that), or -1.
@@ -176,6 +178,8 @@ namespace WKRace.Server
         public bool Ranked = true;
         public MatchMode Mode;
         public MatchRules Rules;
+        // A segment match (Segments): it ends at the segment's end. 0: the whole climb.
+        public byte Segment;
         // The lobby the race was started from (friendly races), or null (ranked).
         public Lobby Lobby;
         public long CreatedMs;

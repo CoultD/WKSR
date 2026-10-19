@@ -3,6 +3,8 @@
 ## 0.9.7
 
 - **"X is typing..."** shows above the chat's input line while someone in the same room is writing a line (lobbies, matches, Global, and Steam lobbies). Players on 0.9.6 or older do not send or see it.
+- **Segment lobbies.** CREATE LOBBY has a SEGMENT box: tick it and pick the segment in the list next to it, and the lobby's matches (1v1 or party) play that part of the climb instead of the whole one; the clock stops at the segment's end. Artifact bans are left out when the segment ends before the artifact room. Works on the official server and in Steam lobbies; players on 0.9.6 or older cannot join a segment lobby.
+- **The lobby browser only lists lobbies of players on your version** (the others could not be joined anyway), and shows each lobby's segment.
 
 ## 0.9.6
 

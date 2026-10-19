@@ -15,19 +15,27 @@ namespace WKRace.Protocol
         public bool LobbyBrowser;
         // "X is typing..." (ChatTyping / ChatTypingNote).
         public bool ChatTyping;
+        // Lobbies can play a segment (LobbyCreate.Segment).
+        public bool LobbySegments;
 
         public override MessageType Type { get { return MessageType.ServerFeatures; } }
 
         public override void Write(PacketWriter w)
         {
             w.WriteBool(LobbyBrowser);
-            if (ChatTyping) w.WriteBool(true);
+            // The 0.9.7 flags, both or neither (a 0.9.6 client reads only the first byte, and skips the rest).
+            if (ChatTyping || LobbySegments)
+            {
+                w.WriteBool(ChatTyping);
+                w.WriteBool(LobbySegments);
+            }
         }
 
         public static ServerFeatures Read(PacketReader r)
         {
             var m = new ServerFeatures { LobbyBrowser = r.ReadBool() };
             if (r.Remaining > 0) m.ChatTyping = r.ReadBool();
+            if (r.Remaining > 0) m.LobbySegments = r.ReadBool();
             // Features of later versions.
             while (r.Remaining > 0) r.ReadByte();
             return m;
@@ -76,6 +84,7 @@ namespace WKRace.Protocol
         public byte Members;
         public byte MaxPlayers;
         public bool Racing;
+        public byte Segment;
     }
 
     // Server -> client: the public lobbies (at most MaxEntries; Cut when there were more).
@@ -85,6 +94,8 @@ namespace WKRace.Protocol
 
         public readonly List<LobbyListEntry> Entries = new List<LobbyListEntry>();
         public bool Cut;
+        // Each lobby's segment, after the entries (for clients from 0.9.7 on; a 0.9.6 client would not read them).
+        public bool WithSegments;
 
         public override MessageType Type { get { return MessageType.LobbyList; } }
 
@@ -104,6 +115,8 @@ namespace WKRace.Protocol
                 w.WriteByte(e.MaxPlayers);
                 w.WriteBool(e.Racing);
             }
+            if (WithSegments)
+                for (int i = 0; i < count; i++) w.WriteByte(Entries[i].Segment);
         }
 
         public static LobbyList Read(PacketReader r)
@@ -123,6 +136,11 @@ namespace WKRace.Protocol
                     MaxPlayers = r.ReadByte(),
                     Racing = r.ReadBool(),
                 });
+            }
+            if (r.Remaining >= count && count > 0)
+            {
+                m.WithSegments = true;
+                foreach (LobbyListEntry e in m.Entries) e.Segment = r.ReadByte();
             }
             return m;
         }

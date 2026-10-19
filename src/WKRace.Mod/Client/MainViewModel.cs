@@ -438,7 +438,7 @@ namespace WKRace.Client
             get
             {
                 if (_lobbyState == null) return "";
-                return RulesText.Describe(_lobbyState.Rules) + (_lobbyState.Mode == MatchMode.Party ? ". One life, no restarts, unranked." : ". Unranked.")
+                return SegmentPrefix(_lobbyState.Segment) + RulesText.Describe(_lobbyState.Rules) + (_lobbyState.Mode == MatchMode.Party ? ". One life, no restarts, unranked." : ". Unranked.")
                     + (_lobbyState.AllowUnapproved ? " Unapproved mods allowed." : "");
             }
         }
@@ -738,6 +738,7 @@ namespace WKRace.Client
                     _lobbyBrowser = false;
                     _chatTypingKnown = false;
                     _typingSent = false;
+                    _lobbySegments = false;
                     // The server's name wins: it refuses a taken name and an admin can set one.
                     if (welcome.Name.Length > 0 && welcome.Name != _settings.Name)
                     {
@@ -771,7 +772,7 @@ namespace WKRace.Client
                     break;
 
                 case LobbyCreated created: OnLobbyCreated(created); break;
-                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; break;
+                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; _lobbySegments = features.LobbySegments; Raise(nameof(HasLobbySegments)); break;
                 case ChatTypingNote typingNote: OnTypingNote(typingNote); break;
                 case LobbyList lobbyList: OnLobbyList(lobbyList); break;
                 case LobbyState lobby: OnLobbyState(lobby); break;
@@ -2190,7 +2191,7 @@ namespace WKRace.Client
                 UpdateFindTitle();
             }
             // The box only exists once a mod is marked on the server; before that it changes nothing.
-            _server.Send(new LobbyCreate { GameBuild = MyBuildTag(), Mode = LobbyRules.Mode, Rules = LobbyRules.Rules, AllowUnapproved = _modsMarked && _settings.LobbyUnapproved });
+            _server.Send(new LobbyCreate { GameBuild = MyBuildTag(), Mode = LobbyRules.Mode, Rules = LobbyRules.Rules, AllowUnapproved = _modsMarked && _settings.LobbyUnapproved, Segment = LobbySegmentToSend() });
             LobbyText = "Opening a lobby...";
         }
 

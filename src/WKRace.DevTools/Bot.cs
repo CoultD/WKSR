@@ -146,7 +146,7 @@ namespace WKRace.DevTools
                     return frame == null ? null : MessageCodec.Decode(frame);
                 };
 
-                send(new ClientHello { PlayerId = id, Token = token, Name = o.Name, ClientVersion = "bot" });
+                send(new ClientHello { PlayerId = id, Token = token, Name = o.Name, ClientVersion = BuildTag.ShortVersion(typeof(Bot).Assembly.GetName().Version.ToString()) });
                 bool said = false;
                 if (race.MatchId == Guid.Empty)
                 {

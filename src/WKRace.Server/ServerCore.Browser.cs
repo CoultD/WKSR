@@ -11,13 +11,20 @@ namespace WKRace.Server
         // The first WKSR version that knows the lobby browser's messages, and the first that knows "X is typing...".
         private const string BrowserVersion = "0.9.6";
         internal const string TypingVersion = "0.9.7";
+        // The first that knows segment lobbies.
+        internal const string SegmentsVersion = "0.9.7";
         // A player may ask for the list this often.
         private const int LobbyListIntervalMs = 1500;
 
         private void SendFeatures(Player player)
         {
             if (!BuildTag.AtLeast(player.ClientVersion, BrowserVersion)) return;
-            player.Send(new ServerFeatures { LobbyBrowser = true, ChatTyping = BuildTag.AtLeast(player.ClientVersion, TypingVersion) });
+            player.Send(new ServerFeatures
+            {
+                LobbyBrowser = true,
+                ChatTyping = BuildTag.AtLeast(player.ClientVersion, TypingVersion),
+                LobbySegments = BuildTag.AtLeast(player.ClientVersion, SegmentsVersion),
+            });
         }
 
         // Only the host lists or unlists their lobby.
@@ -34,14 +41,16 @@ namespace WKRace.Server
             long now = _now();
             if (now - player.LastLobbyListMs < LobbyListIntervalMs) return;
             player.LastLobbyListMs = now;
+            // Only lobbies of players on the same version: the others could not be joined anyway.
+            string version = BuildTag.ShortVersion(player.ClientVersion);
             List<Lobby> listed = _lobbies.Values
-                .Where(l => l.Public && l.Host.Conn != null && l.Members.Count > 0)
+                .Where(l => l.Public && l.Host.Conn != null && l.Members.Count > 0 && BuildTag.ShortVersion(l.Host.ClientVersion) == version)
                 // Lobbies that can be joined right now first, then the fuller ones.
                 .OrderBy(l => l.Match != null || l.Members.Count >= l.MaxPlayers ? 1 : 0)
                 .ThenByDescending(l => l.Members.Count)
                 .ThenBy(l => l.CreatedMs)
                 .ToList();
-            var list = new LobbyList { Cut = listed.Count > LobbyList.MaxEntries };
+            var list = new LobbyList { Cut = listed.Count > LobbyList.MaxEntries, WithSegments = BuildTag.AtLeast(player.ClientVersion, SegmentsVersion) };
             foreach (Lobby l in listed.Take(LobbyList.MaxEntries))
             {
                 list.Entries.Add(new LobbyListEntry
@@ -53,6 +62,7 @@ namespace WKRace.Server
                     Members = (byte)l.Members.Count,
                     MaxPlayers = (byte)l.MaxPlayers,
                     Racing = l.Match != null,
+                    Segment = l.Segment,
                 });
             }
             player.Send(list);
