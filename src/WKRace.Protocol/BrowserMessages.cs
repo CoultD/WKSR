@@ -21,7 +21,10 @@ namespace WKRace.Protocol
 
         public static ServerFeatures Read(PacketReader r)
         {
-            return new ServerFeatures { LobbyBrowser = r.ReadBool() };
+            var m = new ServerFeatures { LobbyBrowser = r.ReadBool() };
+            // Features of later versions (one byte each at the end): skipped, so a newer server's list still reads.
+            while (r.Remaining > 0) r.ReadByte();
+            return m;
         }
     }
 
