@@ -38,6 +38,7 @@ namespace WKRace.DevTools
             public int DieAt = -1;            // race seconds at which to die, or -1
             public bool Afk;                  // never press ready and never climb (stands at the bottom)
             public string Say;                // a chat line to send once in the lobby or race
+            public int TypeFor;               // seconds of "typing..." before that line
             public double OffsetX, OffsetZ;   // where the bot climbs, relative to the start (to spread several out)
             public double VoicePitch;          // speak a test tone at this pitch (Hz) through the voice relay, or 0
         }
@@ -84,6 +85,7 @@ namespace WKRace.DevTools
                     case "--die-at": o.DieAt = int.Parse(next, CultureInfo.InvariantCulture); i++; break;
                     case "--afk": o.Afk = true; break;
                     case "--say": o.Say = next; i++; break;
+                    case "--type-for": o.TypeFor = int.Parse(next, CultureInfo.InvariantCulture); i++; break;
                     case "--voice": o.VoicePitch = next != null && !next.StartsWith("--") ? double.Parse(next, CultureInfo.InvariantCulture) : 220; if (next != null && !next.StartsWith("--")) i++; break;
                     case "--offset":
                         string[] xz = next.Split(',');
@@ -99,7 +101,7 @@ namespace WKRace.DevTools
                         break;
                     default:
                         Console.Error.WriteLine("Usage: WKRace.DevTools bot [--server host:port] [--name n] [--speed m/s] [--split-every m] [--finish-after s] [--drop-at s] [--drop-for s]\n" +
-                            "    [--lobby code | --host-party [--start-at n]] [--die-at s] [--afk] [--say text] [--offset x,z] [--voice [hz]] [--loop]\n" +
+                            "    [--lobby code | --host-party [--start-at n]] [--die-at s] [--afk] [--say text [--type-for s]] [--offset x,z] [--voice [hz]] [--loop]\n" +
                             "  A bot in a lobby stays in it after each race (for rematches) until it is stopped.");
                         return 2;
                 }
@@ -171,6 +173,8 @@ namespace WKRace.DevTools
 
                 BotVoice voice = null;
                 long nextPing = 0, nextVoiceReport = 0;
+                // --type-for: "typing..." until then, repeated every 2.5 s, and then the line (-1: nothing pending).
+                long sayAt = -1, nextTyping = 0;
                 const double startX = 0, startY = 2.4, startZ = 4.7;
                 stream.ReadTimeout = 50;
                 while (true)
@@ -184,6 +188,17 @@ namespace WKRace.DevTools
                     {
                         nextPing = now + 2000;
                         send(new Ping { ClientTimeMs = now });
+                    }
+                    if (sayAt > 0 && now >= sayAt)
+                    {
+                        sayAt = -1;
+                        send(new ChatTyping { Room = ChatRooms.Match, Typing = false });
+                        send(new ChatSend { Text = o.Say });
+                    }
+                    else if (sayAt > 0 && now >= nextTyping)
+                    {
+                        nextTyping = now + 2500;
+                        send(new ChatTyping { Room = ChatRooms.Match, Typing = true });
                     }
                     if (voice != null && now >= nextVoiceReport)
                     {
@@ -203,7 +218,12 @@ namespace WKRace.DevTools
                                 Console.WriteLine("Starting the race.");
                                 send(new LobbyStart());
                             }
-                            if (!said && o.Say != null) { said = true; send(new ChatSend { Text = o.Say }); }
+                            if (!said && o.Say != null)
+                            {
+                                said = true;
+                                if (o.TypeFor > 0) sayAt = now + o.TypeFor * 1000L;
+                                else send(new ChatSend { Text = o.Say });
+                            }
                             break;
                         case ChatMessage chat:
                             Console.WriteLine(chat.System ? "* " + chat.Text : chat.From + ": " + chat.Text);

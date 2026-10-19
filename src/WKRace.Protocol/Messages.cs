@@ -72,6 +72,8 @@ namespace WKRace.Protocol
         LobbyVisibility = 73,
         LobbyListRequest = 74,
         LobbyList = 75,
+        ChatTyping = 76,
+        ChatTypingNote = 77,
 
         VoiceHello = 80,
         VoiceState = 81,

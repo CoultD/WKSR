@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using WKRace.Protocol;
 
 namespace WKRace.Client
@@ -93,6 +94,68 @@ namespace WKRace.Client
         }
 
         // The Global chat is joined by itself after connecting, unless the player turned that off (OPTIONS, CHAT).
+        // ---- "X is typing..." -------------------------------------------------------------------------------------
+
+        // How long a typing note lasts without being repeated, and how often this player's own is repeated.
+        private const double TypingShownSeconds = 5;
+        private const double TypingRepeatSeconds = 3;
+        // The server passes typing notes on (it said so: ServerFeatures.ChatTyping).
+        private bool _chatTypingKnown;
+        private bool _typingSent;
+        private byte _typingRoom;
+        private DateTime _typingSentAt;
+        // Who is typing, by room: name and until when (a note runs out unless repeated).
+        private readonly Dictionary<byte, Dictionary<string, DateTime>> _typers = new Dictionary<byte, Dictionary<string, DateTime>>();
+
+        // Called every frame while the chat is open (and when it closes): whether this player has a line on the go.
+        public void NoteTyping(bool typing)
+        {
+            if (!_chatTypingKnown || _server == null || _link != LinkState.Connected)
+            {
+                _typingSent = false;
+                return;
+            }
+            DateTime now = DateTime.UtcNow;
+            byte room = _selectedRoom;
+            if (typing)
+            {
+                if (_typingSent && _typingRoom != room) _server.Send(new ChatTyping { Room = _typingRoom, Typing = false });
+                if (_typingSent && _typingRoom == room && (now - _typingSentAt).TotalSeconds < TypingRepeatSeconds) return;
+                _server.Send(new ChatTyping { Room = room, Typing = true });
+                _typingSent = true;
+                _typingRoom = room;
+                _typingSentAt = now;
+            }
+            else if (_typingSent)
+            {
+                _server.Send(new ChatTyping { Room = _typingRoom, Typing = false });
+                _typingSent = false;
+            }
+        }
+
+        private void OnTypingNote(ChatTypingNote note)
+        {
+            Dictionary<string, DateTime> room;
+            if (!_typers.TryGetValue(note.Room, out room)) _typers[note.Room] = room = new Dictionary<string, DateTime>();
+            if (note.Typing) room[note.From] = DateTime.UtcNow.AddSeconds(TypingShownSeconds);
+            else room.Remove(note.From);
+        }
+
+        // "Alex is typing...", "Alex and Sam are typing...", "Several players are typing...", or "".
+        public string TypingText(byte roomId)
+        {
+            Dictionary<string, DateTime> room;
+            if (!_typers.TryGetValue(roomId, out room) || room.Count == 0) return "";
+            DateTime now = DateTime.UtcNow;
+            List<string> names = room.Where(t => t.Value > now).Select(t => t.Key).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList();
+            if (names.Count != room.Count) foreach (string gone in room.Keys.Where(k => room[k] <= now).ToList()) room.Remove(gone);
+            if (names.Count == 0) return "";
+            if (names.Count == 1) return names[0] + " is typing...";
+            if (names.Count == 2) return names[0] + " and " + names[1] + " are typing...";
+            if (names.Count == 3) return names[0] + ", " + names[1] + " and " + names[2] + " are typing...";
+            return "Several players are typing...";
+        }
+
         // The newest line under the closed chat (it fades 10 s after it arrived). OPTIONS, CHAT can switch it off.
         public bool ChatPreview
         {

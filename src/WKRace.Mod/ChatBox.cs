@@ -53,6 +53,7 @@ namespace WKRace.Mod
             Open = false;
             AnyOpen = false;
             Draft = "";
+            EmbeddedClient.Vm?.NoteTyping(false);
             ShowRooms = false;
             Hits.Clear();
             ChatInputBlock.End();
@@ -106,6 +107,8 @@ namespace WKRace.Mod
                 }
             }
             Draft = draft.ToString();
+            // "X is typing..." for the others while a line is on the go (not once it is sent).
+            EmbeddedClient.Vm?.NoteTyping(!enter && Draft.Trim().Length > 0);
             if (!enter) return null;
             // Silenced for sending too fast: the line stays in the box (the input line counts the seconds down) and
             // can be sent once the silence is over.

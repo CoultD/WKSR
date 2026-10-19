@@ -93,6 +93,39 @@ namespace WKRace.Server
             }
         }
 
+        // "X is typing...": passed on to the others in the room the player is typing in (the same people a line there
+        // would reach), and only to clients that know the note. Repeats are limited so it cannot flood anyone.
+        private const int TypingIntervalMs = 400;
+
+        private void HandleChatTyping(Player player, ChatTyping typing)
+        {
+            long now = _now();
+            if (typing.Typing && now - player.LastTypingMs < TypingIntervalMs) return;
+            player.LastTypingMs = now;
+            IEnumerable<Player> to;
+            byte room;
+            if (typing.Room == ChatRooms.Global)
+            {
+                if (!player.InGlobalChat) return;
+                to = _byConnection.Values.Where(p => p.InGlobalChat);
+                room = ChatRooms.Global;
+            }
+            else if (player.Match != null)
+            {
+                to = player.Match.Slots.Select(s => s.Player);
+                room = ChatRooms.Match;
+            }
+            else if (player.Lobby != null)
+            {
+                to = player.Lobby.Members;
+                room = ChatRooms.Match;
+            }
+            else return;
+            var note = new ChatTypingNote { Room = room, From = player.Record.Name, Typing = typing.Typing };
+            foreach (Player p in to.ToList())
+                if (p != player && p.Conn != null && BuildTag.AtLeast(p.ClientVersion, TypingVersion)) p.Send(note);
+        }
+
         // Joining the Global room brings its lines of the last 24 hours. (The Match room needs no asking: it is the
         // player's lobby or match.)
         private void HandleChatJoin(Player player, ChatJoin join)

@@ -57,6 +57,7 @@ namespace WKRace.Server
         // The client's version, from its hello (what it can read beyond the protocol's basics).
         public string ClientVersion = "";
         public long LastLobbyListMs = long.MinValue / 2;
+        public long LastTypingMs = long.MinValue / 2;
         // Reported by the client: is the game (with the mod) attached to it.
         public bool GameConnected = true;
         // Lobby creates and joins in the last minute.

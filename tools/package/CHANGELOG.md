@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.7
+
+- **"X is typing..."** shows above the chat's input line while someone in the same room is writing a line (lobbies, matches, Global, and Steam lobbies). Players on 0.9.6 or older do not send or see it.
+
 ## 0.9.6
 
 - **No more provisional ratings.** Every ranked match moves both ratings by the same amount, from your first match on, and the rating leaderboard lists everyone who has played ranked. (Ratings you already have stay as they are.)

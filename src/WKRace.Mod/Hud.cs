@@ -1021,9 +1021,13 @@ namespace WKRace.Mod
             }
             else
             {
-                // The newest line sits just above the input line; older ones go up, as far as the panel has room.
+                // "X is typing..." just above the input line (its row is always kept, so the lines do not jump).
+                string typing = vm.TypingText(room.Id);
+                if (typing.Length > 0) Label(20, inputY - 24f, _vw - 64, 22, typing, 16, Dim, TextAlignmentOptions.Left);
+                rows = Mathf.Max(1, rows - 1);
+                // The newest line sits above that; older ones go up, as far as the panel has room.
                 chat.Scroll = Mathf.Clamp(chat.Scroll, 0, Mathf.Max(0, room.Lines.Count - rows));
-                float ly = inputY - 6f - lineHeight;
+                float ly = inputY - 26f - lineHeight;
                 for (int i = room.Lines.Count - 1 - chat.Scroll, shown = 0; i >= 0 && shown < rows; i--)
                 {
                     WKRace.Client.ChatRoomLine line = room.Lines[i];

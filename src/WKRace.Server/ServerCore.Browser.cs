@@ -8,15 +8,16 @@ namespace WKRace.Server
     // BrowserVersion on are told about it (ServerFeatures); older ones never see the new messages.
     public sealed partial class ServerCore
     {
-        // The first WKSR version that knows the lobby browser's messages.
+        // The first WKSR version that knows the lobby browser's messages, and the first that knows "X is typing...".
         private const string BrowserVersion = "0.9.6";
+        internal const string TypingVersion = "0.9.7";
         // A player may ask for the list this often.
         private const int LobbyListIntervalMs = 1500;
 
         private void SendFeatures(Player player)
         {
             if (!BuildTag.AtLeast(player.ClientVersion, BrowserVersion)) return;
-            player.Send(new ServerFeatures { LobbyBrowser = true });
+            player.Send(new ServerFeatures { LobbyBrowser = true, ChatTyping = BuildTag.AtLeast(player.ClientVersion, TypingVersion) });
         }
 
         // Only the host lists or unlists their lobby.

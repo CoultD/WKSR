@@ -370,4 +370,47 @@ namespace WKRace.Protocol
             return new ChatJoin { Room = r.ReadByte(), Join = r.ReadBool() };
         }
     }
+    // Client -> server: this player is (or no longer is) typing a line in a chat room. Only sent to a server that said
+    // it knows it (ServerFeatures.ChatTyping); repeated every few seconds while the typing goes on.
+    public sealed class ChatTyping : Message
+    {
+        public byte Room;
+        public bool Typing;
+
+        public override MessageType Type { get { return MessageType.ChatTyping; } }
+
+        public override void Write(PacketWriter w)
+        {
+            w.WriteByte(Room);
+            w.WriteBool(Typing);
+        }
+
+        public static ChatTyping Read(PacketReader r)
+        {
+            return new ChatTyping { Room = r.ReadByte(), Typing = r.ReadBool() };
+        }
+    }
+
+    // Server -> client: another player in one of the client's rooms is typing (or stopped). Sent only to clients from
+    // 0.9.7 on. A note that is not repeated runs out after a few seconds.
+    public sealed class ChatTypingNote : Message
+    {
+        public byte Room;
+        public string From = "";
+        public bool Typing;
+
+        public override MessageType Type { get { return MessageType.ChatTypingNote; } }
+
+        public override void Write(PacketWriter w)
+        {
+            w.WriteByte(Room);
+            w.WriteString(From, ProtocolConstants.MaxNameLength);
+            w.WriteBool(Typing);
+        }
+
+        public static ChatTypingNote Read(PacketReader r)
+        {
+            return new ChatTypingNote { Room = r.ReadByte(), From = r.ReadString(ProtocolConstants.MaxNameLength), Typing = r.ReadBool() };
+        }
+    }
 }

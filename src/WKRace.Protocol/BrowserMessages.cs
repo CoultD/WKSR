@@ -7,21 +7,30 @@ namespace WKRace.Protocol
     // client only asks for the lobby list (or makes its lobby public) after a ServerFeatures saying the server lists
     // lobbies. Older clients and servers keep working with newer ones.
 
-    // Server -> client, right after the welcome: what this server can do beyond the protocol's basics.
+    // Server -> client, right after the welcome: what this server can do beyond the protocol's basics. Each later
+    // feature is one more byte at the end, written only for clients that know it (ChatTyping: 0.9.7 on); a reader
+    // skips the bytes it does not know, so an older client can read a newer server's list.
     public sealed class ServerFeatures : Message
     {
         public bool LobbyBrowser;
+        // "X is typing..." (ChatTyping / ChatTypingNote).
+        public bool ChatTyping;
 
         public override MessageType Type { get { return MessageType.ServerFeatures; } }
 
         public override void Write(PacketWriter w)
         {
             w.WriteBool(LobbyBrowser);
+            if (ChatTyping) w.WriteBool(true);
         }
 
         public static ServerFeatures Read(PacketReader r)
         {
-            return new ServerFeatures { LobbyBrowser = r.ReadBool() };
+            var m = new ServerFeatures { LobbyBrowser = r.ReadBool() };
+            if (r.Remaining > 0) m.ChatTyping = r.ReadBool();
+            // Features of later versions.
+            while (r.Remaining > 0) r.ReadByte();
+            return m;
         }
     }
 

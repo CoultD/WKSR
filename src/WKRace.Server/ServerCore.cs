@@ -115,6 +115,9 @@ namespace WKRace.Server
                 case ChatJoin chatJoin:
                     HandleChatJoin(player, chatJoin);
                     break;
+                case ChatTyping typing:
+                    HandleChatTyping(player, typing);
+                    break;
                 case VoiceState voiceState:
                     HandleVoiceState(player, voiceState);
                     break;

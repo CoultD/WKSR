@@ -98,6 +98,8 @@ namespace WKRace.Tests
                 new ServerFeatures { LobbyBrowser = true },
                 new LobbyVisibility { Public = true },
                 new LobbyListRequest(),
+                new ChatTyping { Room = ChatRooms.Match, Typing = true },
+                new ChatTypingNote { Room = ChatRooms.Match, From = "Alpha", Typing = true },
                 new LobbyList { Entries = { new LobbyListEntry { LobbyId = 7, Host = "Alpha", Mode = MatchMode.Party, Rules = MatchRules.CuratedSeeds, Members = 3, MaxPlayers = 15 } } },
                 new ServerStatus { PlayersOnline = 12, LatestVersion = "0.9.5", PlayersQueued = 3 },
                 new ChatSend { Text = "gl hf" },

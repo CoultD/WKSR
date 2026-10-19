@@ -736,6 +736,8 @@ namespace WKRace.Client
                 case ServerWelcome welcome:
                     _welcomeName = welcome.Name;
                     _lobbyBrowser = false;
+                    _chatTypingKnown = false;
+                    _typingSent = false;
                     // The server's name wins: it refuses a taken name and an admin can set one.
                     if (welcome.Name.Length > 0 && welcome.Name != _settings.Name)
                     {
@@ -769,7 +771,8 @@ namespace WKRace.Client
                     break;
 
                 case LobbyCreated created: OnLobbyCreated(created); break;
-                case ServerFeatures features: OnServerFeatures(features); break;
+                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; break;
+                case ChatTypingNote typingNote: OnTypingNote(typingNote); break;
                 case LobbyList lobbyList: OnLobbyList(lobbyList); break;
                 case LobbyState lobby: OnLobbyState(lobby); break;
                 case LobbyClosed closed:
