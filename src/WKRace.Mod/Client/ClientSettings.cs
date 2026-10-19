@@ -55,6 +55,8 @@ namespace WKRace.Client
         public bool LobbyPublic { get; set; } = true;
         // CREATE LOBBY's segment (Segments), 0: the whole climb.
         public byte LobbySegment { get; set; }
+        // The host's lobby option: the last player still running may finish their run.
+        public bool LobbyLetLastFinish { get; set; } = true;
         // The player chose STEAM LOBBIES (instead of CONNECT) on the WKSR window's first page: kept for the next start.
         public bool SteamLobbies { get; set; }
         public bool SoloUnapproved { get; set; }

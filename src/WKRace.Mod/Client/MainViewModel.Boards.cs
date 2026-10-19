@@ -310,7 +310,7 @@ namespace WKRace.Client
         public ICommand ReplaysDownCommand { get; private set; }
         public ICommand ReplaysFolderCommand { get; private set; }
 
-        public bool ShowSaveRow { get { return _endedRun != null && HasResult; } }
+        public bool ShowSaveRow { get { return _endedRun != null && HasResult && _afterWin == Guid.Empty; } }
         public bool ShowSavePrompt { get { return ShowSaveRow && !_endedRunSaved; } }
 
         public string SavePromptText

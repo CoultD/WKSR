@@ -220,6 +220,11 @@ namespace WKRace.Mod
         // The shared real-time clock at the finish (who finished first), next to MyFinishMs (the game's timer).
         public int MyFinishRealMs = -1;
         public MatchResult Result;
+        // Keep running after a win: a 1v1 won by the opponent's death (the result is in, the run goes on), or the last
+        // one standing in a party. The prompt ("+" keep running, "-" end the run) shows until PromptUntil.
+        public bool AfterWin;
+        public bool LastStanding;
+        public float PromptUntil;
         // The race clock when the result arrived, for showing a stopped clock afterwards.
         public int EndRaceMs;
         public float DoneUntil;

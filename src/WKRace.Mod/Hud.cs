@@ -275,6 +275,7 @@ namespace WKRace.Mod
             }
 
             if (s.Phase == RacePhase.Done && !s.ResultClosed) DrawResult(s, center);
+            if ((s.AfterWin || s.LastStanding) && s.Phase == RacePhase.Racing) DrawWinPrompt(s, center);
             if (s.Held && s.IsActive) DrawPause(s, center);
             DrawGhostMarkers(s);
             DrawBanners(s, linkUp, center);
@@ -641,6 +642,27 @@ namespace WKRace.Mod
             value.a = alpha;
             Label(center - 400, _vh * 0.6f, 800, 26, _flashTitle, 18, title, TextAlignmentOptions.Center);
             Label(center - 400, _vh * 0.6f + 26, 800, 50, _flashValue, 40, value, TextAlignmentOptions.Center);
+        }
+
+        // Keep running after a win: near the top, a thin light frame around a see-through box, so it catches the eye
+        // without covering the climb. Fades out over its last two seconds.
+        private void DrawWinPrompt(RaceSession s, float center)
+        {
+            float left = s.PromptUntil - Time.unscaledTime;
+            if (left <= 0f) return;
+            float alpha = Mathf.Clamp01(left / 2f);
+            const float w = 560f, h = 70f;
+            float x = center - w / 2f, y = 96f;
+            var frame = new Color(1f, 0.85f, 0.45f, 0.85f * alpha);
+            Panel(x, y, w, h, new Color(0f, 0f, 0f, 0.35f * alpha));
+            Panel(x, y, w, 2f, frame);
+            Panel(x, y + h - 2f, w, 2f, frame);
+            Panel(x, y, 2f, h, frame);
+            Panel(x + w - 2f, y, 2f, h, frame);
+            string title = s.LastStanding ? "YOU ARE THE LAST ONE STANDING" : "YOUR OPPONENT DIED - YOU WIN";
+            Label(x, y + 8f, w, 26f, title, 20, new Color(1f, 0.85f, 0.45f, alpha), TextAlignmentOptions.Center);
+            string keys = "[" + WKRace.Client.KeyNames.Name((int)RaceConfig.KeepRunningKey.Value) + "] KEEP RUNNING        [" + WKRace.Client.KeyNames.Name((int)RaceConfig.EndRunKey.Value) + "] END RUN";
+            Label(x, y + 38f, w, 22f, keys, 15, new Color(1f, 1f, 1f, 0.9f * alpha), TextAlignmentOptions.Center);
         }
 
         private void DrawResult(RaceSession s, float center)

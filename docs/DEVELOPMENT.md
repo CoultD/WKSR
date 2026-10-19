@@ -23,6 +23,8 @@ The player name is the Steam name. Names are unique (ignoring case): a name anot
 
 **One run each, finish it or die trying.** Restarting is off during a match: the game's restart command (and any bind that runs it, such as `bind rr restart`), the pause and death menus' restart and F9 all refuse with a message; other binds keep working. **A death ends the match at once: whoever is still alive wins**, however far behind they are. Leaving for the menu does not stop the clock and cannot be undone either (F10 twice forfeits). A game that crashes rejoins on its own.
 
+**Keep running after a win** (0.9.7): when a 1v1 is decided by a death and the match allows it (ranked always; a lobby by its host's `LobbyOptions`), the winner gets the `MatchResult` with `KeepRunning` and their run stays open on the server (`Match.Survivor`) until they finish (a ranked finish goes on the 1v1 time board), die, end it (`EndRun`), leave or reach the time limit. A party's last one standing (everyone else out, nobody finished) gets `LastStanding`; with the option off the party ends there. Keys: `EndRunAfterWin` (-), `KeepRunningAfterWin` (+).
+
 **Disconnects pause the match.** If a player's client, connection or game drops, both games freeze and the match clock stops. The missing player has 60 seconds to come back; after that they forfeit. When they are back, play resumes after a 3 second countdown with the clock exactly where it stopped. A player who has already finished is never forfeited and does not pause the match.
 
 ## Friendly matches (lobbies)

@@ -4,6 +4,7 @@
 
 - **"X is typing..."** shows above the chat's input line while someone in the same room is writing a line (lobbies, matches, Global, and Steam lobbies). Players on 0.9.6 or older do not send or see it.
 - **Segment lobbies.** CREATE LOBBY has a SEGMENT box: tick it and pick the segment in the list next to it, and the lobby's matches (1v1 or party) play that part of the climb instead of the whole one; the clock stops at the segment's end. Artifact bans are left out when the segment ends before the artifact room. Works on the official server and in Steam lobbies; players on 0.9.6 or older cannot join a segment lobby.
+- **Keep running after a win.** When your opponent dies in a 1v1, you win at once (ratings move then), but your run goes on: a prompt at the top says so, **+** keeps running (the prompt goes away) and **-** ends the run (both can be changed under OPTIONS; the prompt fades after 30 seconds). A ranked run you finish this way still goes on the 1v1 leaderboard. In a party, the last one standing (everyone else out, nobody finished) gets the same choice. The loser can watch or leave without disturbing the run. Ranked always allows it; in a friendly lobby the host decides with LET THE LAST PLAYER FINISH THEIR RUN (on by default; off, a 1v1 ends at the death and a party as soon as one player is left).
 - **The lobby browser only lists lobbies of players on your version** (the others could not be joined anyway), and shows each lobby's segment.
 
 ## 0.9.6

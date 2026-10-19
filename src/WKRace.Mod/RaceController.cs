@@ -365,6 +365,11 @@ namespace WKRace.Mod
                 case RacePaused paused: OnRacePaused(paused); break;
                 case RaceResumed resumed: OnRaceResumed(resumed); break;
                 case MatchResult result: OnMatchResult(result); break;
+                case LastStanding last: OnLastStanding(last); break;
+                case EndRun end:
+                    // WKSR's END RUN button after a win: as the "-" key.
+                    if (_session != null && _session.MatchId == end.MatchId && (_session.AfterWin || _session.LastStanding) && _session.Phase == RacePhase.Racing) EndRunAfterWin(_session);
+                    break;
                 case BanState bans: OnBanState(bans); break;
                 case PracticeMark mark: _practiceMark = mark; break;
                 case MatchRoster roster: OnRoster(roster); break;
@@ -595,10 +600,25 @@ namespace WKRace.Mod
             if (RaceConfig.Verbose) Plugin.Log.LogDebug("Replayed attempt " + s.Attempt + " with " + s.MySplits.Count + " splits.");
         }
 
+        // How long the "keep running" prompt stays up.
+        private const float WinPromptSeconds = 30f;
+
         private void OnMatchResult(MatchResult result)
         {
             RaceSession s = _session;
             if (s == null || s.MatchId != result.MatchId) return;
+            // Won, and the run may go on: the result is in, the run is not over.
+            if (result.KeepRunning && s.Phase == RacePhase.Racing)
+            {
+                s.Result = result;
+                s.AfterWin = true;
+                s.PromptUntil = Time.unscaledTime + WinPromptSeconds;
+                ClearGhosts(s);
+                Plugin.Log.LogInfo("Match won: " + result.Reason + " The run goes on.");
+                return;
+            }
+            s.AfterWin = false;
+            s.LastStanding = false;
             s.EndRaceMs = Math.Max(0, s.RaceMs);
             s.Result = result;
             s.Phase = RacePhase.Done;
@@ -609,6 +629,41 @@ namespace WKRace.Mod
             ClearGhosts(s);
             Shot("result", 1f);
             Plugin.Log.LogInfo("Match over: " + result.Outcome + " - " + result.Reason);
+        }
+
+        private void OnLastStanding(LastStanding last)
+        {
+            RaceSession s = _session;
+            if (s == null || s.MatchId != last.MatchId || s.Phase != RacePhase.Racing) return;
+            s.LastStanding = true;
+            s.PromptUntil = Time.unscaledTime + WinPromptSeconds;
+            Plugin.Log.LogInfo("Last one standing: the run goes on.");
+        }
+
+        // "-" after a win: the run ends here. A 1v1's result is already in; a party's comes from the server.
+        private void EndRunAfterWin(RaceSession s)
+        {
+            _link.Send(new EndRun { MatchId = s.MatchId });
+            s.PromptUntil = 0f;
+            if (s.AfterWin) ConcludeAfterWin(s);
+            else
+            {
+                s.Phase = RacePhase.Finished;
+                _hud.Toast("Ending your run...", 3f);
+            }
+        }
+
+        // The run after a 1v1 win is over (finished, died or ended): the result shows as it would have at the death.
+        private void ConcludeAfterWin(RaceSession s)
+        {
+            s.AfterWin = false;
+            s.EndRaceMs = Math.Max(0, s.RaceMs);
+            s.Phase = RacePhase.Done;
+            s.Held = false;
+            s.ResumePending = false;
+            s.DoneUntil = Time.unscaledTime + ResultSeconds;
+            GameBridge.ThawWorld();
+            Shot("result", 1f);
         }
 
         // ---- run lifecycle ----------------------------------------------
@@ -804,6 +859,7 @@ namespace WKRace.Mod
             _nextRetry = Time.unscaledTime + RetryInterval;
             SendFinish(s);
             _hud.Flash(title, RaceFormat.Time(s.MyFinishMs), Hud.DeltaColor(-1));
+            if (s.AfterWin) ConcludeAfterWin(s);
         }
 
         // A death ends the run: in a race the other racer wins, in practice the run is kept if it is the best so far.
@@ -819,6 +875,7 @@ namespace WKRace.Mod
             _nextRetry = Time.unscaledTime + RetryInterval;
             SendDied(s);
             _hud.Flash(string.IsNullOrEmpty(s.DeathText) ? "YOU DIED" : s.DeathText, RaceFormat.Time(s.MyFinishMs), Hud.DeltaColor(1));
+            if (s.AfterWin) ConcludeAfterWin(s);
             Plugin.Log.LogInfo("Died at " + RaceFormat.Time(s.MyFinishMs) + " (" + s.DeathCause + ": " + s.DeathText + ")");
         }
 
@@ -1051,6 +1108,14 @@ namespace WKRace.Mod
             }
             if (Input.GetKeyDown(RaceConfig.JoinKey.Value)) OnJoinKey();
             if (Input.GetKeyDown(RaceConfig.ForfeitKey.Value)) OnForfeitKey();
+            RaceSession won = _session;
+            if (won != null && (won.AfterWin || won.LastStanding) && won.Phase == RacePhase.Racing)
+            {
+                if (Input.GetKeyDown(RaceConfig.EndRunKey.Value) || (RaceConfig.EndRunKey.Value == KeyCode.Minus && Input.GetKeyDown(KeyCode.KeypadMinus)))
+                    EndRunAfterWin(won);
+                else if (Input.GetKeyDown(RaceConfig.KeepRunningKey.Value) || (RaceConfig.KeepRunningKey.Value == KeyCode.Equals && Input.GetKeyDown(KeyCode.KeypadPlus)))
+                    won.PromptUntil = 0f;
+            }
         }
 
         private void OnJoinKey()
@@ -1135,6 +1200,12 @@ namespace WKRace.Mod
             if (Time.unscaledTime < _forfeitConfirmUntil)
             {
                 _forfeitConfirmUntil = 0f;
+                // After a win, forfeiting is ending the run.
+                if ((s.AfterWin || s.LastStanding) && s.Phase == RacePhase.Racing)
+                {
+                    EndRunAfterWin(s);
+                    return;
+                }
                 _link.Send(new PlayerForfeit());
                 _hud.Toast(s.Practice ? "Ending the practice run..." : "Forfeiting...", Hud.DeltaColor(1), 4f);
                 return;

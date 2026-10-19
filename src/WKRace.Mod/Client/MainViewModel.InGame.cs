@@ -74,6 +74,8 @@ namespace WKRace.Client
                 case "Splits": return _keys.Splits;
                 case "Ghost": return _keys.Ghost;
                 case "Chat": return _keys.Chat;
+                case "EndRun": return _keys.EndRun;
+                case "KeepRunning": return _keys.KeepRunning;
                 default: return 0;
             }
         }

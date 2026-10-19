@@ -10,6 +10,8 @@ namespace WKRace.Mod
         public static ConfigEntry<KeyCode> SplitsKey;
         public static ConfigEntry<KeyCode> GhostKey;
         public static ConfigEntry<KeyCode> ChatKey;
+        public static ConfigEntry<KeyCode> EndRunKey;
+        public static ConfigEntry<KeyCode> KeepRunningKey;
         public static ConfigEntry<float> HudScale;
         public static ConfigEntry<bool> ShowSplits;
         public static ConfigEntry<int> SplitRows;
@@ -65,6 +67,8 @@ namespace WKRace.Mod
             ChatKey = config.Bind("Hotkeys", "Chat", KeyCode.F8, "Open and close the chat (Enter sends a line). It cannot be a key that types a character.");
             // Before 0.9.5 this was T, which opened a single line; the chat is now opened and closed with one key.
             if (WKRace.Protocol.KeyBindings.TypesText((int)ChatKey.Value)) ChatKey.Value = KeyCode.F8;
+            EndRunKey = config.Bind("Hotkeys", "EndRunAfterWin", KeyCode.Minus, "After a win (your opponent died, or you are the last one standing): end your run. The number pad's - works too.");
+            KeepRunningKey = config.Bind("Hotkeys", "KeepRunningAfterWin", KeyCode.Equals, "After a win: keep running and close the prompt. The number pad's + works too.");
 
             HudScale = config.Bind("Hud", "Scale", 1.0f, new ConfigDescription("Overlay size multiplier.", new AcceptableValueRange<float>(0.5f, 2.5f)));
             ShowSplits = config.Bind("Hud", "ShowSplitList", true, "Show the split list while racing.");
@@ -113,6 +117,8 @@ namespace WKRace.Mod
                 Splits = (int)SplitsKey.Value,
                 Ghost = (int)GhostKey.Value,
                 Chat = (int)ChatKey.Value,
+                EndRun = (int)EndRunKey.Value,
+                KeepRunning = (int)KeepRunningKey.Value,
             };
         }
 
@@ -124,6 +130,8 @@ namespace WKRace.Mod
             SetKey(SplitsKey, keys.Splits);
             SetKey(GhostKey, keys.Ghost);
             if (!WKRace.Protocol.KeyBindings.TypesText(keys.Chat)) SetKey(ChatKey, keys.Chat);
+            SetKey(EndRunKey, keys.EndRun);
+            SetKey(KeepRunningKey, keys.KeepRunning);
         }
 
         private static void SetKey(ConfigEntry<KeyCode> entry, int code)

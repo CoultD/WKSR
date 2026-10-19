@@ -342,7 +342,14 @@ namespace WKRace.Client
                 _settings.Save();
             });
             LaunchCommand = new RelayCommand(LaunchGame);
-            ForfeitCommand = new RelayCommand(() => { if (_matchActive) { ToHost(new PlayerForfeit()); Log(Solo ? "Run ended." : "Forfeit requested."); } }, () => _matchActive);
+            ForfeitCommand = new RelayCommand(() =>
+            {
+                if (!_matchActive) return;
+                // After a win the game ends the run (and says so to WKSR, which tells the server).
+                if (_afterWin != Guid.Empty || _lastStanding) { ToMod(new EndRun { MatchId = _match.MatchId }); return; }
+                ToHost(new PlayerForfeit());
+                Log(Solo ? "Run ended." : "Forfeit requested.");
+            }, () => _matchActive);
             DismissCommand = new RelayCommand(DismissMatch, () => HasMatch && !_matchActive);
             JoinLobbyCommand = new RelayCommand(JoinLobby, () => _phase != ClientPhase.InMatch && !string.IsNullOrWhiteSpace(_joinCode));
             CopyCodeCommand = new RelayCommand(CopyCode, () => _hasLobby);
@@ -492,7 +499,7 @@ namespace WKRace.Client
 
         public bool PracticeSeedEmpty { get { return string.IsNullOrEmpty(_practiceSeed); } }
         public string OppColumnText { get { return _lastWasPractice ? "BEST" : "OPPONENT"; } }
-        public string ForfeitText { get { return Solo ? "END RUN" : "FORFEIT"; } }
+        public string ForfeitText { get { return Solo || _afterWin != Guid.Empty || _lastStanding ? "END RUN" : "FORFEIT"; } }
         public ICommand ReportBugCommand { get; private set; }
         // Asks the window to open the bug report window.
         internal event Action<BugReportContext> OpenBugReport;
@@ -776,6 +783,14 @@ namespace WKRace.Client
                 case ChatTypingNote typingNote: OnTypingNote(typingNote); break;
                 case LobbyList lobbyList: OnLobbyList(lobbyList); break;
                 case LobbyState lobby: OnLobbyState(lobby); break;
+                case LastStanding last:
+                    if (_match == null || last.MatchId != _match.MatchId) break;
+                    ToMod(last);
+                    _lastStanding = true;
+                    Raise(nameof(ForfeitText));
+                    MatchState = "Last one standing";
+                    Log("Everyone else is out: you are the last one standing. Keep running, or end your run (" + KeyNames.Name(_keys.EndRun) + " in the game).");
+                    break;
                 case LobbyClosed closed:
                     if (closed.LobbyId != _lobbyId) break;
                     HasLobby = false;
@@ -961,6 +976,8 @@ namespace WKRace.Client
 
         private void OnMatchResult(MatchResult result)
         {
+            // Won by the opponent's death, and the run goes on (KeepRunning): the result counts now, the run is not over.
+            bool keepRunning = result.KeepRunning && _matchActive && _practice == null && !_rankedSolo;
             _voice.ClearPositions();
             // A ranked solo run reads like a solo run here too (no opponent, no rating change).
             bool rankedSolo = _rankedSolo;
@@ -1008,6 +1025,18 @@ namespace WKRace.Client
             RaiseSaveReplay();
             MatchState = "Finished";
             Log(title + ": " + result.Reason);
+            _lastStanding = false;
+            if (keepRunning)
+            {
+                _afterWin = result.MatchId;
+                Raise(nameof(ForfeitText));
+                _matchActive = true;
+                _started = true;
+                _phase = ClientPhase.InMatch;
+                MatchState = "Won - still running";
+                ResultText = title + " - " + result.Reason + rating + "   Your run goes on: in the game, " + KeyNames.Name(_keys.KeepRunning) + " keeps running and " + KeyNames.Name(_keys.EndRun) + " ends it.";
+                Log("Your run goes on; a finish still counts" + (ranked ? " for the 1v1 leaderboard." : "."));
+            }
             Record(result, ranked, practice, newBest, died, rankedSolo);
             Raise(nameof(RatingText));
             Raise(nameof(RecordText));
@@ -1213,6 +1242,20 @@ namespace WKRace.Client
 
         private void OnModMessage(Message message)
         {
+            // The run after a win ends: the server is told, and the match is over here too.
+            if (_afterWin != Guid.Empty && (message is PlayerFinished || message is PlayerDied || message is EndRun || message is PlayerForfeit))
+            {
+                _server?.Send(message is PlayerForfeit ? new EndRun { MatchId = _afterWin } : message);
+                EndAfterWin(message);
+                return;
+            }
+            if (message is EndRun)
+            {
+                // The last one standing in a party ends their run; the party's result follows from the server.
+                _server?.Send(message);
+                Log("Ending your run...");
+                return;
+            }
             switch (message)
             {
                 case ModHello hello:
@@ -2233,6 +2276,7 @@ namespace WKRace.Client
             RaiseLobby();
             UpdateLobbyText();
             PushStatus();
+            if (joined) SendLobbyOptionsIfNeeded(state);
             OnLobbyStateEdition(state);
         }
 

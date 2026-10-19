@@ -176,6 +176,10 @@ namespace WKRace.Client
             switch (code)
             {
                 case 8: return "BACKSPACE";
+                case 45: return "-";
+                case 61: return "+";
+                case 269: return "NUM -";
+                case 270: return "NUM +";
                 case 9: return "TAB";
                 case 13: return "ENTER";
                 case 19: return "PAUSE";

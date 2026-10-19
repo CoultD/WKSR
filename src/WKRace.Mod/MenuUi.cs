@@ -511,6 +511,8 @@ namespace WKRace.Mod
             Key(gui, vm, "SPLITS ON / OFF", "Splits");
             Key(gui, vm, "GHOSTS ON / OFF", "Ghost");
             Key(gui, vm, "OPEN / CLOSE CHAT", "Chat");
+            Key(gui, vm, "AFTER A WIN: END RUN", "EndRun");
+            Key(gui, vm, "AFTER A WIN: KEEP RUNNING", "KeepRunning");
             gui.EndVertical();
             if (_keyProblem != null) gui.Text(_keyProblem, Red, true);
 
@@ -643,6 +645,14 @@ namespace WKRace.Mod
             gui.EndList();
 
             gui.Text("The lobby talks in the chat's Match room: press " + vm.KeyChatText + " to open the chat.", Dim, true);
+            if (vm.ShowLetLastFinish)
+            {
+                // Keep running after a win: the host decides for the lobby.
+                bool letFinish = vm.LobbyLetLastFinish;
+                gui.BeginReadOnly(!vm.IsLobbyHost);
+                if (gui.Checkbox(ref letFinish, "LET THE LAST PLAYER FINISH THEIR RUN") && vm.IsLobbyHost) vm.SetLetLastFinish(letFinish);
+                gui.EndReadOnly();
+            }
 
             if (!string.IsNullOrEmpty(vm.LobbyText)) gui.Text(vm.LobbyText, Gold, true);
             gui.AddSpacing(8f);
