@@ -1,0 +1,6 @@
+[Unit]
+Description=Health check of the WK Race VPS (race server, disk, certificate, backups)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wkrace-monitor

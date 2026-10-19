@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="$(MSBuildThisFileDirectory)..\..\local.props" Condition="Exists('$(MSBuildThisFileDirectory)..\..\local.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>WKRace</AssemblyName>
+    <RootNamespace>WKRace.Mod</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>embedded</DebugType>
+    <!-- The server core's fields for ranked solo, voice and the mods list are never set in the game. -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\White Knuckle</GameDir>
+    <Managed>$(GameDir)\White Knuckle_Data\Managed</Managed>
+    <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+  </ItemGroup>
+
+  <!-- The wire protocol is compiled into the plugin so only a single DLL has to be shipped. -->
+  <ItemGroup>
+    <Compile Include="..\WKRace.Protocol\**\*.cs" Exclude="..\WKRace.Protocol\obj\**;..\WKRace.Protocol\bin\**" LinkBase="Protocol" />
+    <!-- STEAM LOBBIES: the lobby's host runs the match server's core in their game (Steam/Host). Named one by one, so
+         a new server file never lands in the game by accident; what the core needs from the server's storage and its
+         ranked-only parts is stood in for by Steam/Host/HostStandIns.cs. -->
+    <Compile Include="..\WKRace.Server\ServerCore.cs;..\WKRace.Server\ServerCore.Lobby.cs;..\WKRace.Server\ServerCore.Match.cs;..\WKRace.Server\ServerCore.Party.cs;..\WKRace.Server\ServerCore.Bans.cs;..\WKRace.Server\ServerCore.Chat.cs;..\WKRace.Server\ServerCore.Browser.cs;..\WKRace.Server\Model.cs;..\WKRace.Server\PlayerRecord.cs;..\WKRace.Server\ServerOptions.cs;..\WKRace.Server\LogAddress.cs;..\WKRace.Server\TimerWatch.cs" LinkBase="Server" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="$(Managed)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(Managed)\Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="$(Managed)\UnityEngine*.dll" Private="false" />
+    <Reference Include="$(Managed)\Unity.*.dll" Private="false" />
+    <Reference Include="$(Managed)\Sirenix*.dll" Private="false" />
+    <Reference Include="$(Managed)\Rewired*.dll" Private="false" />
+    <Reference Include="$(Managed)\Febucci*.dll" Private="false" />
+    <Reference Include="$(Managed)\DOTween.dll" Private="false" />
+    <Reference Include="$(Managed)\AstarPathfindingProject.dll" Private="false" />
+    <Reference Include="$(Managed)\Facepunch.Steamworks.Win64.dll" Private="false" />
+    <Reference Include="$(Managed)\Newtonsoft.Json.dll" Private="false" />
+    <Reference Include="$(Managed)\ALINE.dll" Private="false" />
+    <Reference Include="$(Managed)\Drawing.dll" Private="false" />
+    <Reference Include="$(Managed)\DarkMachineUI.dll" Private="false" />
+    <Reference Include="$(Managed)\Coffee*.dll" Private="false" />
+    <Reference Include="$(Managed)\XNode.dll" Private="false" />
+    <Reference Include="$(Managed)\Clipper2Lib.dll" Private="false" />
+    <Reference Include="$(Managed)\andywiecko*.dll" Private="false" />
+    <Reference Include="$(Managed)\Discord.Sdk.dll" Private="false" />
+    <!-- The two mods the in-game menu is drawn with (Thunderstore: prideunique-ImuiBepInEx, MonkSilly-WKLib). They are
+         installed as dependencies by the mod manager and only referenced here: neither is shipped inside this mod. -->
+    <Reference Include="$(MSBuildThisFileDirectory)..\..\lib\ImuiBepInEx.dll" Private="false" />
+    <Reference Include="$(MSBuildThisFileDirectory)..\..\lib\WKLib.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- ImuiBepInEx and WKLib are not in the repository: tools/fetch-libs.ps1 (run by tools/build.ps1) downloads them. -->
+  <Target Name="CheckLibs" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)..\..\lib\ImuiBepInEx.dll') Or !Exists('$(MSBuildThisFileDirectory)..\..\lib\WKLib.dll')"
+           Text="lib\ImuiBepInEx.dll or lib\WKLib.dll is missing. Run: powershell -ExecutionPolicy Bypass -File tools\fetch-libs.ps1" />
+  </Target>
+
+  <Target Name="InstallPlugin" AfterTargets="Build" Condition="'$(PluginInstallDir)' != ''">
+    <MakeDir Directories="$(PluginInstallDir)" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(PluginInstallDir)" />
+  </Target>
+
+</Project>

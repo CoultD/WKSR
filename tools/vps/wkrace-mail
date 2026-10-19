@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""Email for the WK Race VPS: bug reports from WKSR and health-check alerts.
+
+  sudo wkrace-mail setup          one-time: the sending account, its SMTP server and password (asked, never shown),
+                                  and where to send
+  sudo wkrace-mail test           send a test email
+  wkrace-mail alert SUBJECT       (root) send an alert; the text comes from stdin
+  wkrace-mail reports             (root) email the bug reports waiting in /var/lib/wkrace/reports, then delete them
+
+Mail goes out through the sending account's own SMTP server (port 465 with SSL, or 587 with STARTTLS), usually with
+an app password made for it in the account's security settings; it can be sent to a different address. The settings
+live in /etc/wkrace/mail.conf, readable by root only.
+Big reports are split over several emails so each stays under the usual 25 MB limit.
+"""
+import configparser
+import getpass
+import json
+import mimetypes
+import os
+import re
+import shutil
+import smtplib
+import ssl
+import sys
+from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
+
+CONF = "/etc/wkrace/mail.conf"
+SPOOL = "/var/lib/wkrace/reports"
+# Raw attachment bytes per email: base64 makes them about 37% bigger, and Gmail takes 25 MB.
+PART_BYTES = 15 * 1024 * 1024
+EMAIL_RE = re.compile(r"^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$")
+# SMTP server and port of common providers, offered as the default in setup.
+PROVIDERS = {
+    "gmail.com": ("smtp.gmail.com", 465),
+    "googlemail.com": ("smtp.gmail.com", 465),
+    "outlook.com": ("smtp-mail.outlook.com", 587),
+    "hotmail.com": ("smtp-mail.outlook.com", 587),
+    "live.com": ("smtp-mail.outlook.com", 587),
+    "msn.com": ("smtp-mail.outlook.com", 587),
+    "yahoo.com": ("smtp.mail.yahoo.com", 465),
+    "icloud.com": ("smtp.mail.me.com", 587),
+    "me.com": ("smtp.mail.me.com", 587),
+    "gmx.com": ("mail.gmx.com", 465),
+    "gmx.net": ("mail.gmx.net", 465),
+    "gmx.de": ("mail.gmx.net", 465),
+    "web.de": ("smtp.web.de", 587),
+    "zoho.com": ("smtp.zoho.com", 465),
+    "zohomail.com": ("smtp.zoho.com", 465),
+    "fastmail.com": ("smtp.fastmail.com", 465),
+    "mail.com": ("smtp.mail.com", 587),
+    "aol.com": ("smtp.aol.com", 465),
+}
+
+
+def load():
+    if not os.path.exists(CONF):
+        return None
+    c = configparser.ConfigParser(interpolation=None)
+    c.read(CONF)
+    m = c["mail"]
+    return {
+        "host": m.get("host", "smtp.gmail.com"),
+        "port": m.getint("port", 465),
+        "user": m["user"],
+        "password": m["password"],
+        "to": m.get("to", m["user"]),
+    }
+
+
+def send(conf, messages):
+    context = ssl.create_default_context()
+    if conf["port"] == 465:
+        smtp = smtplib.SMTP_SSL(conf["host"], conf["port"], context=context, timeout=120)
+    else:
+        # 587: plain connection upgraded with STARTTLS; refuse to log in without it.
+        smtp = smtplib.SMTP(conf["host"], conf["port"], timeout=120)
+        smtp.starttls(context=context)
+    with smtp:
+        smtp.login(conf["user"], conf["password"])
+        for msg in messages:
+            smtp.send_message(msg)
+
+
+def message(conf, subject, body):
+    msg = EmailMessage()
+    msg["From"] = "WKSR server <" + conf["user"] + ">"
+    msg["To"] = conf["to"]
+    msg["Subject"] = " ".join(subject.split())[:200]
+    msg["Date"] = formatdate(localtime=False)
+    msg["Message-ID"] = make_msgid(domain="wksr.local")
+    msg.set_content(body)
+    return msg
+
+
+def setup():
+    if os.geteuid() != 0:
+        sys.exit("Run with sudo.")
+    old = load() or {}
+    user = input("Email address that SENDS the emails [" + old.get("user", "") + "]: ").strip() or old.get("user", "")
+    if not EMAIL_RE.match(user):
+        sys.exit("That is not an email address.")
+    guess_host, guess_port = PROVIDERS.get(user.rsplit("@", 1)[1].lower(), (old.get("host", ""), old.get("port", 465)))
+    host = input("Its SMTP server [" + guess_host + "]: ").strip() or guess_host
+    if not re.match(r"^[A-Za-z0-9.-]+$", host or ""):
+        sys.exit("That is not a server name (your provider's help pages list it under SMTP or 'other email apps').")
+    port_text = input("Port, 465 (SSL) or 587 (STARTTLS) [" + str(guess_port) + "]: ").strip() or str(guess_port)
+    if port_text not in ("465", "587"):
+        sys.exit("Use 465 or 587.")
+    print("Password for " + user + " (typing is not shown). Most providers want an app password made for this,")
+    print("not the normal one: look for 'app passwords' in the account's security settings.")
+    password = getpass.getpass("Password: ").strip()
+    if host == "smtp.gmail.com":
+        password = "".join(password.split())   # Google shows app passwords in groups of four
+    if not password:
+        sys.exit("Nothing changed.")
+    to = input("Send reports and alerts TO [" + old.get("to", user) + "]: ").strip() or old.get("to", user)
+    if not EMAIL_RE.match(to):
+        sys.exit("That is not an email address.")
+    c = configparser.ConfigParser(interpolation=None)
+    c["mail"] = {"host": host, "port": port_text, "user": user, "password": password, "to": to}
+    os.makedirs(os.path.dirname(CONF), exist_ok=True)
+    old_umask = os.umask(0o077)
+    try:
+        with open(CONF, "w") as f:
+            c.write(f)
+    finally:
+        os.umask(old_umask)
+    os.chmod(CONF, 0o600)
+    print("Saved " + CONF + ". Sending a test email...")
+    test()
+
+
+def test():
+    conf = load()
+    if conf is None:
+        sys.exit("Not set up yet: sudo wkrace-mail setup")
+    try:
+        send(conf, [message(conf, "WKSR server: test email", "Email from the WK Race server works.\n")])
+    except smtplib.SMTPAuthenticationError:
+        sys.exit("The mail server refused the login. Check the address and the password (sudo wkrace-mail setup); "
+                 "many providers only accept an app password, and some need SMTP turned on in the account settings.")
+    except (OSError, smtplib.SMTPException) as e:
+        sys.exit("Could not send: " + str(e))
+    print("Test email sent to " + conf["to"] + ".")
+
+
+def alert(subject):
+    conf = load()
+    if conf is None:
+        sys.exit("Not set up: sudo wkrace-mail setup")
+    body = sys.stdin.read()
+    try:
+        send(conf, [message(conf, subject, body)])
+    except (OSError, smtplib.SMTPException) as e:
+        sys.exit("Could not send the alert: " + str(e))
+
+
+def report_messages(conf, folder):
+    with open(os.path.join(folder, "report.json"), encoding="utf-8") as f:
+        r = json.load(f)
+    files = []
+    for name in r.get("files", []):
+        path = os.path.join(folder, name)
+        if os.path.isfile(path) and os.path.basename(name) == name:
+            files.append((name, path, os.path.getsize(path)))
+
+    # Greedy split: each email carries at most PART_BYTES of files (one file is never bigger: WKSR limits it).
+    parts, current, size = [], [], 0
+    for item in files:
+        if current and size + item[2] > PART_BYTES:
+            parts.append(current)
+            current, size = [], 0
+        current.append(item)
+        size += item[2]
+    parts.append(current)
+
+    contact = r.get("contact") or "not given"
+    head = (
+        "Bug report " + r["id"] + "\n"
+        + "Player: " + r.get("player", "?") + " (" + r.get("playerId", "?") + ")\n"
+        + "Contact: " + contact + "\n"
+        + "Received: " + r.get("received", "?") + "\n\n"
+        + "Title: " + r.get("title", "") + "\n\n"
+        + "Description:\n" + r.get("description", "") + "\n\n"
+        + "Versions:\n" + r.get("info", "") + "\n"
+    )
+    messages = []
+    for i, part in enumerate(parts):
+        label = "" if len(parts) == 1 else " (part " + str(i + 1) + " of " + str(len(parts)) + ")"
+        body = head if i == 0 else "Bug report " + r["id"] + label + ": more attachments.\n"
+        body += "\nFiles" + label + ":\n" + ("".join("  " + n + "\n" for n, _, _ in part) or "  none\n")
+        msg = message(conf, "[WKSR bug] " + r.get("title", "") + label, body)
+        if EMAIL_RE.match(r.get("contact", "")):
+            try:
+                msg["Reply-To"] = r["contact"]
+            except (ValueError, TypeError):
+                pass
+        for name, path, _ in part:
+            ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            maintype, subtype = ctype.split("/", 1)
+            with open(path, "rb") as f:
+                msg.add_attachment(f.read(), maintype=maintype, subtype=subtype, filename=name)
+        messages.append(msg)
+    return messages
+
+
+def reports():
+    if not os.path.isdir(SPOOL):
+        return
+    folders = sorted(d for d in os.listdir(SPOOL) if not d.startswith(".") and os.path.isdir(os.path.join(SPOOL, d)))
+    if not folders:
+        return
+    conf = load()
+    if conf is None:
+        print(str(len(folders)) + " bug report(s) waiting, but email is not set up: sudo wkrace-mail setup")
+        return
+    failed = 0
+    for d in folders:
+        folder = os.path.join(SPOOL, d)
+        try:
+            send(conf, report_messages(conf, folder))
+        except (OSError, ValueError, KeyError, smtplib.SMTPException) as e:
+            print("Could not email bug report " + d + ": " + str(e))
+            failed += 1
+            continue
+        shutil.rmtree(folder)
+        print("Emailed bug report " + d)
+    if failed:
+        sys.exit(1)
+
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0] in ("-h", "--help", "help"):
+        print(__doc__)
+        return
+    cmd = args[0]
+    if cmd == "setup":
+        setup()
+    elif cmd == "test":
+        test()
+    elif cmd == "alert" and len(args) >= 2:
+        alert(" ".join(args[1:]))
+    elif cmd == "reports":
+        reports()
+    else:
+        sys.exit("Unknown command. Run: wkrace-mail help")
+
+
+if __name__ == "__main__":
+    main()

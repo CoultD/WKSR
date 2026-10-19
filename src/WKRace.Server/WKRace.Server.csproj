@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>WKRace.Server</RootNamespace>
+    <AssemblyName>WKRace.Server</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WKRace.Protocol\WKRace.Protocol.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SQLite with whole-file encryption: Microsoft's ADO.NET provider on SQLite3 Multiple Ciphers.
+         Only one SQLitePCLRaw bundle may be referenced, so the plain Microsoft.Data.Sqlite package is not used. -->
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.12" />
+    <PackageReference Include="SQLite3MC.PCLRaw.bundle" Version="2.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WKRace.Tests" />
+  </ItemGroup>
+
+</Project>

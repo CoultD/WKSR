@@ -1,0 +1,11 @@
+<Project>
+
+  <!-- Copy to local.props (git-ignored) and adjust for this machine. -->
+  <PropertyGroup>
+    <!-- White Knuckle install folder; the plugin compiles against its Managed assemblies. -->
+    <GameDir>C:\Program Files (x86)\Steam\steamapps\common\White Knuckle</GameDir>
+    <!-- Optional: after every build of WKRace.Mod the DLL is copied here. -->
+    <PluginInstallDir>$(AppData)\Thunderstore Mod Manager\DataFolder\WhiteKnuckle\profiles\Default\BepInEx\plugins\WKRace</PluginInstallDir>
+  </PropertyGroup>
+
+</Project>

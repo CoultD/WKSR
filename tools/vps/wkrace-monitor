@@ -1,0 +1,123 @@
+#!/bin/bash
+# Health check for the VPS, run every 5 minutes by wkrace-monitor.timer (or by hand: sudo wkrace-monitor).
+# Checks the race server (service, TCP port, sign-in page), nginx when installed, any other services named in
+# /etc/wkrace/monitor-services (one systemd unit per line), disk space, the TLS certificate's expiry and the daily
+# backup. Prints the result; exits 1 when something is wrong.
+#
+# Alerts go by email once email is set up (sudo wkrace-mail setup), and/or to a Discord webhook URL or an ntfy topic
+# URL (https://ntfy.sh/<long-random-topic>) put in /etc/wkrace/alert-url (root only, chmod 600). An alert is sent when
+# the set of problems changes (including "all OK again") and repeated every 6 hours while something stays wrong.
+# Without either, results only go to the journal:
+#   journalctl -u wkrace-monitor -n 20
+set -uo pipefail
+
+ALERT_URL_FILE=/etc/wkrace/alert-url
+MAIL_CONF=/etc/wkrace/mail.conf
+STATE_DIR=/var/lib/wkrace-monitor
+REPEAT_SECONDS=$((6 * 3600))
+DISK_LIMIT=85
+CERT_DAYS=14
+BACKUP_MAX_HOURS=30
+
+problems=()
+note() { problems+=("$1"); }
+
+# ---- race server
+if ! systemctl is-active --quiet wkrace; then
+    note "race server (wkrace) is not running"
+elif ! ss -Hltn 'sport = :47600' | grep -q .; then
+    note "race server is running but nothing listens on TCP 47600"
+fi
+
+# ---- sign-in page (nginx -> race server), when Steam sign-in is set up
+SITE=/etc/nginx/sites-enabled/wkrace-steam
+if [ -f "$SITE" ]; then
+    domain=$(awk '$1 == "server_name" { gsub(";", "", $2); print $2; exit }' "$SITE")
+    if [ -n "$domain" ]; then
+        code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "https://$domain/steam/return?n=monitor" || true)
+        [ "$code" = 200 ] || note "sign-in page https://$domain/steam/ answers HTTP ${code:-none} (expected 200)"
+    fi
+fi
+
+# ---- other services on this VPS
+if command -v nginx >/dev/null && ! systemctl is-active --quiet nginx; then
+    note "nginx is not running"
+fi
+# Anything else the operator wants watched: one systemd unit name per line (blank lines and # comments ignored).
+if [ -r /etc/wkrace/monitor-services ]; then
+    while read -r unit _; do
+        case "$unit" in ''|'#'*) continue ;; esac
+        if systemctl cat "$unit" >/dev/null 2>&1 && ! systemctl is-active --quiet "$unit"; then
+            note "$unit is not running"
+        fi
+    done < /etc/wkrace/monitor-services
+fi
+
+# ---- disk
+while read -r use mount; do
+    use=${use%\%}
+    [ "$use" -ge "$DISK_LIMIT" ] 2>/dev/null && note "disk $mount is ${use}% full"
+done < <(df -P -x tmpfs -x devtmpfs -x squashfs -x overlay | awk 'NR > 1 { print $5, $6 }')
+
+# ---- TLS certificates (Let's Encrypt renews at 30 days left, so 14 means renewal is failing)
+for cert in /etc/letsencrypt/live/*/cert.pem; do
+    [ -f "$cert" ] || continue
+    if ! openssl x509 -checkend $((CERT_DAYS * 86400)) -noout -in "$cert" >/dev/null 2>&1; then
+        end=$(openssl x509 -enddate -noout -in "$cert" 2>/dev/null | cut -d= -f2)
+        note "certificate $(basename "$(dirname "$cert")") expires soon ($end): check 'sudo certbot renew'"
+    fi
+done
+
+# ---- daily backup
+newest=$(ls -1t /var/backups/wkrace/wkrace-*-daily.tar.gz 2>/dev/null | head -n 1)
+if [ -n "$newest" ]; then
+    age_hours=$(( ($(date +%s) - $(stat -c %Y "$newest")) / 3600 ))
+    [ "$age_hours" -lt "$BACKUP_MAX_HOURS" ] || note "newest daily backup is ${age_hours} hours old"
+fi
+
+# ---- bug reports that should have been emailed by now
+stuck=$(find /var/lib/wkrace/reports -mindepth 1 -maxdepth 1 -type d ! -name '.*' -mmin +60 2>/dev/null | wc -l)
+[ "$stuck" -eq 0 ] || note "$stuck bug report(s) not emailed for over an hour: check 'sudo wkrace-mail test'"
+
+# ---- report
+host=$(hostname)
+if [ ${#problems[@]} -eq 0 ]; then
+    summary="OK"
+    message="$host: all OK again."
+    echo "All checks passed."
+else
+    summary=$(printf '%s\n' "${problems[@]}")
+    message="$host has a problem:"$'\n'"$(printf -- '- %s\n' "${problems[@]}")"
+    printf 'PROBLEM: %s\n' "${problems[@]}"
+fi
+
+mkdir -p "$STATE_DIR"
+chmod 700 "$STATE_DIR"
+last_summary=$(cat "$STATE_DIR/last" 2>/dev/null || echo "OK")
+last_sent=$(cat "$STATE_DIR/sent-at" 2>/dev/null || echo 0)
+now=$(date +%s)
+
+send=0
+[ "$summary" != "$last_summary" ] && send=1
+[ "$summary" != "OK" ] && [ $((now - last_sent)) -ge $REPEAT_SECONDS ] && send=1
+printf '%s' "$summary" > "$STATE_DIR/last"
+
+if [ "$send" = 1 ] && [ -s "$MAIL_CONF" ]; then
+    if [ ${#problems[@]} -eq 0 ]; then subject="VPS monitor: $host is OK again"; else subject="VPS monitor: $host has a problem"; fi
+    printf '%s\n' "$message" | /usr/local/bin/wkrace-mail alert "$subject" && echo "Alert emailed."
+    echo "$now" > "$STATE_DIR/sent-at"
+fi
+if [ "$send" = 1 ] && [ -s "$ALERT_URL_FILE" ]; then
+    url=$(head -n 1 "$ALERT_URL_FILE" | tr -d '[:space:]')
+    if [[ "$url" == https://discord.com/api/webhooks/* || "$url" == https://discordapp.com/api/webhooks/* ]]; then
+        body=$(python3 -c 'import json, sys; print(json.dumps({"content": sys.stdin.read()[:1900]}))' <<< "$message")
+        curl -s --max-time 15 -H 'Content-Type: application/json' -d "$body" "$url" >/dev/null && echo "Alert sent."
+    elif [[ "$url" == https://* ]]; then
+        curl -s --max-time 15 -H "Title: VPS monitor" -d "$message" "$url" >/dev/null && echo "Alert sent."
+    else
+        echo "Ignoring $ALERT_URL_FILE: it must hold an https:// URL."
+    fi
+    echo "$now" > "$STATE_DIR/sent-at"
+fi
+
+[ ${#problems[@]} -eq 0 ]

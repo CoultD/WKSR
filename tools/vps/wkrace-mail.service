@@ -1,0 +1,6 @@
+[Unit]
+Description=Email the WK Race bug reports waiting on the server
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wkrace-mail reports

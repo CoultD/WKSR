@@ -1,0 +1,44 @@
+#!/bin/bash
+# Backs up the race server's data to /var/backups/wkrace.
+# Usage: wkrace-backup [label]     label: daily (default), pre-update, manual, ...
+# Keeps the newest $KEEP backups of each label (default 30). Backups are readable by root only.
+#
+# Since 0.5.0 the data is an encrypted SQLite database (wkrace.db). While the server runs, its hourly snapshot
+# (wkrace-snapshot.db, also encrypted) is backed up, because copying a live database mid-write is unsafe; when it is
+# stopped, the database itself. The key (/etc/wkrace/db.key) is NOT in the backup: keep a copy of it elsewhere.
+# Before the database existed, the plain JSON files are backed up instead. Imported JSON files are never included.
+set -euo pipefail
+
+DATA=/var/lib/wkrace
+OUT=/var/backups/wkrace
+LABEL=${1:-daily}
+KEEP=${KEEP:-30}
+
+mkdir -p "$OUT"
+chmod 700 "$OUT"
+
+items=()
+if [ -f "$DATA/wkrace.db" ]; then
+    if systemctl is-active --quiet wkrace; then
+        [ -f "$DATA/wkrace-snapshot.db" ] && items+=(wkrace-snapshot.db)
+    else
+        items+=(wkrace.db)
+        [ -f "$DATA/wkrace.db-wal" ] && items+=(wkrace.db-wal)
+    fi
+else
+    for legacy in players.json matches.jsonl; do
+        [ -f "$DATA/$legacy" ] && items+=("$legacy")
+    done
+fi
+
+if [ ${#items[@]} -eq 0 ]; then
+    echo "Nothing to back up yet (no snapshot written so far)."
+    exit 0
+fi
+
+file="$OUT/wkrace-$(date +%Y%m%d-%H%M%S)-$LABEL.tar.gz"
+tar -czf "$file" -C "$DATA" "${items[@]}"
+chmod 600 "$file"
+echo "Backup written: $file ($(du -h "$file" | cut -f1)): ${items[*]}"
+
+ls -1t "$OUT"/wkrace-*-"$LABEL".tar.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --

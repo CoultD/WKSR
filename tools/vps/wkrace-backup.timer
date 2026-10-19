@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily backup of the WK Race server data
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

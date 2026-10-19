@@ -1,0 +1,13 @@
+.dotnet/
+bin/
+obj/
+artifacts/
+dist/
+.vs/
+*.user
+local.props
+data/
+*.log
+__pycache__/
+# Other people's mods the plugin compiles against: tools/fetch-libs.ps1 downloads them.
+lib/

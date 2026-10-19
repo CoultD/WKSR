@@ -1,0 +1,9 @@
+[Unit]
+Description=Health check of the WK Race VPS every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,21 @@
+<Project>
+
+  <PropertyGroup>
+    <Version>0.9.6</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <Authors>WK Race contributors</Authors>
+    <Product>White Knuckle Race</Product>
+  </PropertyGroup>
+
+  <!-- Thunderstore asks every assembly made with AI help to say so (wiki.thunderstore.io/llms-and-ai-generated-files);
+       the README says it too. -->
+  <ItemGroup>
+    <AssemblyMetadata Include="AI_Assisted_Creation" Value="This assembly was partially or fully created with the assistance of Generative AI (code, refactoring and documentation generation)." />
+    <AssemblyMetadata Include="AI_Model_Vendor" Value="Anthropic" />
+    <AssemblyMetadata Include="AI_Model" Value="Claude" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>WKRace.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WKRace.Protocol\WKRace.Protocol.csproj" />
+    <ProjectReference Include="..\..\src\WKRace.Server\WKRace.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Client logic from the mod that does not touch Unity, so it is tested from here. -->
+    <Compile Include="..\..\src\WKRace.Mod\Client\Practice.cs" Link="Client\Practice.cs" />
+    <Compile Include="..\..\src\WKRace.Mod\Client\NameGenerator.cs" Link="Client\NameGenerator.cs" />
+    <Compile Include="..\..\src\WKRace.Mod\Client\SteamLinks.cs" Link="Client\SteamLinks.cs" />
+  </ItemGroup>
+
+</Project>
