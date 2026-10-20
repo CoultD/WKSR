@@ -21,6 +21,15 @@ namespace WKRace.Mod
         private static readonly AccessTools.FieldRef<ENT_Player, Vector3> PlayerVelocity = SafeFieldRef("vel");
 
         public static bool InMenu { get { return SceneManager.GetActiveScene().name == MenuScene; } }
+
+        // Back to the main menu, as the pause menu's button does.
+        public static void LeaveToMenu()
+        {
+            CL_GameManager game = CL_GameManager.gMan;
+            if (game == null || InMenu) return;
+            CL_GameManager.gamemode = null;
+            game.LoadScene(MenuScene);
+        }
         public static bool InRunScene { get { return SceneManager.GetActiveScene().name == RunScene; } }
 
         // The Steam account the game runs under, or 0 when Steam is not there (the game's Steamworks has not come up

@@ -15,6 +15,7 @@ namespace WKRace.Mod
         Racing,
         Finished,   // local finish (or death) reported, waiting for the verdict
         Done,       // verdict received
+        Spectating, // watching a match from outside, in a world built from its seed
     }
 
     internal sealed class SplitRecord
@@ -145,6 +146,9 @@ namespace WKRace.Mod
         // way one player, restarts allowed (each is a fresh run), and a pause stops the clock.
         public bool Practice;
         public bool RankedSolo;
+        // Watching a match from outside (RaceController.Spectate), and the racer to follow first.
+        public bool Spectating;
+        public byte WatchStart;
         // A solo run of a segment (Segments): it ends where the segment does. 0: the whole climb.
         public readonly byte Segment;
         // "SILOS SEGMENT", or "" for the whole climb.

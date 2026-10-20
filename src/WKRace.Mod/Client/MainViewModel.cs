@@ -703,6 +703,7 @@ namespace WKRace.Client
                         LobbyText = "Your lobby closed because the connection to the server was lost.";
                     }
                     if (_pendingJoin != 0) LobbyText = "Waiting for the server connection to join the lobby...";
+                    if (_watching != null) OnSpectateEnd(new SpectateEnd { MatchId = _watching.MatchId, Reason = "Spectating stopped: the connection to the server was lost." });
                     OnLinkLostEdition();
                     break;
             }
@@ -743,6 +744,7 @@ namespace WKRace.Client
         // Server messages, and the practice host's (which stand in for them).
         private void Dispatch(Message message)
         {
+            if (RouteWatched(message)) return;
             switch (message)
             {
                 case ServerWelcome welcome:
@@ -752,6 +754,9 @@ namespace WKRace.Client
                     _typingSent = false;
                     _lobbySegments = false;
                     _playerList = false;
+                    _spectateKnown = false;
+                    // A new session: the server no longer has a watching from before.
+                    if (_watching != null) OnSpectateEnd(new SpectateEnd { MatchId = _watching.MatchId, Reason = "Spectating stopped: the connection to the server was lost." });
                     // The server's name wins: it refuses a taken name and an admin can set one.
                     if (welcome.Name.Length > 0 && welcome.Name != _settings.Name)
                     {
@@ -785,7 +790,10 @@ namespace WKRace.Client
                     break;
 
                 case LobbyCreated created: OnLobbyCreated(created); break;
-                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; _lobbySegments = features.LobbySegments; _playerList = features.PlayerList; Raise(nameof(HasLobbySegments)); break;
+                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; _lobbySegments = features.LobbySegments; _playerList = features.PlayerList; _spectateKnown = features.Spectate; Raise(nameof(HasLobbySegments)); break;
+                case SpectateStart spectateStart: OnSpectateStart(spectateStart); break;
+                case SpectateEnd spectateEnd: OnSpectateEnd(spectateEnd); break;
+                case SpectatorCount spectators: ToMod(spectators); break;
                 case OnlineList onlineList: OnOnlineList(onlineList); break;
                 case Profile profile: OnProfile(profile); break;
                 case ChatTypingNote typingNote: OnTypingNote(typingNote); break;
@@ -1344,6 +1352,11 @@ namespace WKRace.Client
 
                 case PracticeRestart restart:
                     OnPracticeRestart(restart);
+                    break;
+
+                case SpectateRequest _:
+                case SpectateStop _:
+                    OnModSpectate(message);
                     break;
 
                 case PlayerForfeit _:

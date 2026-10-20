@@ -58,6 +58,10 @@ namespace WKRace.Mod
         private int _placeOf;
         private bool _placeUnknown;
 
+        // Spectating (set every frame by the race controller), and how many watch this player's own match or run.
+        public Spectator Spectating;
+        public int Spectators;
+
         // The party position (1 = first) last worked out by the race controller.
         public int CurrentPlace { get { return _place; } }
 
@@ -268,7 +272,8 @@ namespace WKRace.Mod
                     break;
             }
 
-            if (s.Phase == RacePhase.Racing || s.Phase == RacePhase.Finished || s.Phase == RacePhase.Done)
+            // Spectating after being out of the match, the player's own run (place, time, splits) is put away.
+            if ((s.Phase == RacePhase.Racing || s.Phase == RacePhase.Finished || s.Phase == RacePhase.Done) && Spectating == null)
             {
                 if (RaceConfig.ShowSplits.Value || s.Phase == RacePhase.Done) DrawSplits(s);
                 DrawFlash(center);
@@ -280,6 +285,32 @@ namespace WKRace.Mod
             DrawGhostMarkers(s);
             DrawBanners(s, linkUp, center);
             DrawFooter(s);
+            if (Spectating != null) DrawSpectating(s, Spectating, center);
+            else if (Spectators > 0) DrawSpectatorCount();
+        }
+
+        // Spectating: who is followed and how far they are, the controls, and that it is an approximation.
+        private void DrawSpectating(RaceSession s, Spectator sp, float center)
+        {
+            // At the bottom: the game writes its own headers (the region, the height climbed) at the top.
+            const float w = 640f;
+            float x = center - w / 2f, y = _vh - 150f;
+            Panel(x, y, w, 92f, new Color(0f, 0f, 0f, 0.45f));
+            Rival r = sp.Watched;
+            string time = r != null && r.Last != null ? "   " + RaceFormat.Time(r.Last.RaceTimeMs, 1) : "";
+            string status = r == null ? "" : r.Finished ? "   FINISHED" : r.IsOut ? "   OUT" : "";
+            Label(x, y + 4f, w, 30f, "SPECTATING  " + Shorten(sp.WatchedName, 24).ToUpperInvariant() + time + status, 22, Warning, TextAlignmentOptions.Center);
+            string keys = "LEFT / RIGHT CLICK: NEXT / PREVIOUS PLAYER     [" + RaceConfig.SpectateViewKey.Value + "] " + (sp.FirstPerson ? "THIRD PERSON" : "FIRST PERSON")
+                          + (sp.FirstPerson ? "" : "     MOUSE: LOOK AROUND   WHEEL: ZOOM");
+            Label(x, y + 36f, w, 22f, keys, 13, new Color(1f, 1f, 1f, 0.85f), TextAlignmentOptions.Center);
+            Label(x, y + 60f, w, 22f, "Not 100% accurate: built from the players' positions, in your own copy of their world.", 12, Dim, TextAlignmentOptions.Center);
+            if (Spectators > 0) DrawSpectatorCount();
+        }
+
+        // Top right, out of the way: how many are watching.
+        private void DrawSpectatorCount()
+        {
+            Label(_vw - 236f, 12f, 220f, 22f, "SPECTATORS  " + Spectators, 15, new Color(1f, 1f, 1f, 0.7f), TextAlignmentOptions.Right);
         }
 
         // The ready check: press F9 when ready; who is ready; the time left.
@@ -874,8 +905,8 @@ namespace WKRace.Mod
 
         private void DrawFooter(RaceSession s)
         {
-            // (The open chat has its input line there.)
-            if (s.Phase == RacePhase.Done || ChatBox.AnyOpen) return;
+            // (The open chat has its input line there. A spectator has none of these keys.)
+            if (s.Phase == RacePhase.Done || ChatBox.AnyOpen || Spectating != null || s.Spectating) return;
             string first = s.Phase == RacePhase.Waiting && s.ReadySeconds > 0 ? " ready   " : s.Practice ? " restart   " : " start   ";
             string keys = RaceConfig.JoinKey.Value + first + RaceConfig.ForfeitKey.Value + " x2 forfeit   " +
                           RaceConfig.SplitsKey.Value + " splits   " + RaceConfig.GhostKey.Value + " ghost   " + RaceConfig.ChatKey.Value + " chat";

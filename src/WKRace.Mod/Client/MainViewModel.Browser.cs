@@ -16,6 +16,8 @@ namespace WKRace.Client
         public string State { get; set; }
         public Brush Brush { get; set; }
         public ICommand JoinCommand { get; set; }
+        // In a match that can be watched (official server).
+        public ICommand WatchCommand { get; set; }
     }
 
     // The lobby browser: the public lobbies anyone can join. On the official server it is the server's list (when the
@@ -106,6 +108,7 @@ namespace WKRace.Client
                     State = entry.Racing ? "IN A MATCH" : open ? "OPEN" : "FULL",
                     Brush = open ? Theme.Good : Theme.Muted,
                     JoinCommand = new RelayCommand(() => JoinListedLobby(id), () => open && _phase != ClientPhase.InMatch && !(_hasLobby && _lobbyId == id)),
+                    WatchCommand = entry.Racing && !SteamMode ? new RelayCommand(() => SpectateLobby(id, entry.Host), () => CanSpectate) : null,
                 });
             }
             BrowseStatus = BrowseRows.Count == 0 ? "No public lobbies right now. Open one with CREATE LOBBY."

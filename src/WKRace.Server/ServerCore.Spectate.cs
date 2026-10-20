@@ -164,6 +164,7 @@ namespace WKRace.Server
                 p.Send(new SpectateEnd { MatchId = AudienceId(audience), Reason = reason });
             }
             audience.Spectators.Clear();
+            SendSpectatorCount(audience);
         }
 
         // What the players of a match get, passed on to those who watch it (but not to its own players, who have it).

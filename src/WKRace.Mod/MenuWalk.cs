@@ -125,6 +125,68 @@ namespace WKRace.Mod
                     Wait(2f);
                     Shot("segment-4-board");
                     break;
+                case "spectate":
+                    // Two test players play a ranked 1v1; this game watches it from the online list: third person, the
+                    // other player, first person, then STOP SPECTATING and back to the menu.
+                    Page("spectate-1-list", WksrWindow.Page.Players, 2f);
+                    Until("a match to watch", 60f, () =>
+                    {
+                        Vm.KeepPlayersFresh();
+                        return System.Linq.Enumerable.Any(Vm.PlayerRows, r => r.Watchable);
+                    });
+                    Do(() =>
+                    {
+                        Vm.SelectPlayer(System.Linq.Enumerable.First(Vm.PlayerRows, r => r.Watchable));
+                        Plugin.Log.LogInfo("WKSR menu test: players: " + string.Join(" | ", System.Linq.Enumerable.Select(Vm.PlayerRows, r => r.Name + " " + r.Activity + (r.Watchable ? " (watchable)" : ""))));
+                    });
+                    Wait(1f);
+                    Shot("spectate-2-card");
+                    Do(() => Vm.SpectatePlayer(Vm.SelectedPlayer));
+                    Until("the spectator's world", 60f, () => RaceController.Current.Spectating != null);
+                    Wait(4f);
+                    Shot("spectate-3-third-person");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: spectating " + RaceController.Current.Spectating.WatchedName + " at " + ENT_Player.playerObject.transform.position));
+                    Wait(6f);
+                    Shot("spectate-4-later");
+                    Do(() => { RaceController.Current.Spectating.Next(1); Plugin.Log.LogInfo("WKSR menu test: now spectating " + RaceController.Current.Spectating.WatchedName); });
+                    Wait(3f);
+                    Shot("spectate-5-other-player");
+                    Do(() => RaceController.Current.Spectating.ToggleView());
+                    Wait(3f);
+                    Shot("spectate-6-first-person");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: first person at " + ENT_Player.playerObject.transform.position));
+                    Do(() => { CL_GameManager.gMan.Pause(); MenuUi.PressPauseButton(); });
+                    Wait(1.5f);
+                    Shot("spectate-7-wksr");
+                    Do(() => { Vm.StopSpectating(); MenuUi.Close(); CL_GameManager.gMan.UnPause(); });
+                    Until("the main menu", 20f, () => GameBridge.InMenu);
+                    Wait(2f);
+                    Shot("spectate-8-menu");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: back on the menu after spectating"));
+                    break;
+                case "spectate-death":
+                    // A party lobby with the test player: this game dies in the match and watches the rest of it, until
+                    // the test player finishes (then the death screen).
+                    Do(() => { Vm.LobbyRules.IsParty = true; Vm.LobbyPublic = true; Press(Vm.OpenLobbyCommand, action); });
+                    Until("the lobby opening", 10f, () => Vm.ShowLobbyRoom && !string.IsNullOrEmpty(Vm.LobbyCode));
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: lobby code " + Vm.LobbyCode));
+                    Until("the test player in the lobby", 30f, () => Vm.StartLobbyCommand.CanExecute(null));
+                    Do(() => Press(Vm.StartLobbyCommand, "start"));
+                    Until("the ready check", 90f, () => Vm.ShowReady && Vm.ReadyCommand.CanExecute(null));
+                    Do(() => Press(Vm.ReadyCommand, "ready"));
+                    Until("the match running", 90f, () => RaceController.Current.SessionPhase == RacePhase.Racing);
+                    Wait(8f);
+                    Shot("death-1-racing");
+                    Do(() => { Plugin.Log.LogInfo("WKSR menu test: dying"); ENT_Player.playerObject.Kill("debug"); });
+                    Until("spectating after the death", 15f, () => RaceController.Current.Spectating != null);
+                    Wait(4f);
+                    Shot("death-2-spectating");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: spectating " + RaceController.Current.Spectating.WatchedName + " at " + ENT_Player.playerObject.transform.position));
+                    Until("the end of the match", 120f, () => RaceController.Current.Spectating == null);
+                    Wait(3f);
+                    Shot("death-3-after");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: spectating over; dead " + CL_GameManager.isDead()));
+                    break;
                 case "players":
                     // The players online (the test player hosts a public party lobby): the list, the test player's card,
                     // their profile, mute and unmute, then JOIN GAME.

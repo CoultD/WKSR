@@ -113,10 +113,14 @@ namespace WKRace.Mod
         // What the game says killed the player ("deathfloor", "falling", ...), from the last real death.
         public static string LastDeathCause = "";
 
-        private static void DiePrefix(string type, out bool __state)
+        private static bool DiePrefix(string type, out bool __state)
         {
             __state = CL_GameManager.isDead();
             if (!__state) LastDeathCause = type ?? "";
+            // Out of a match in which others still run: no death screen, the player watches the rest of it.
+            bool spectate = false;
+            if (!__state) Guarded(() => { if (RaceController.Current != null) spectate = RaceController.Current.DeathBecomesSpectating(type); });
+            return !spectate;
         }
 
         private static void DiePostfix(CL_GameManager __instance, bool __state)

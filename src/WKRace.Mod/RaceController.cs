@@ -13,7 +13,7 @@ namespace WKRace.Mod
     using Message = WKRace.Protocol.Message;
 
     // Drives a match from the game thread: reacts to the client, the game and the hotkeys, and feeds the HUD and ghost.
-    internal sealed class RaceController : MonoBehaviour
+    internal sealed partial class RaceController : MonoBehaviour
     {
         private const float StateInterval = 1f / 15f;
         private const float RetryInterval = 2f;
@@ -110,6 +110,8 @@ namespace WKRace.Mod
             UpdateChat();
             HandleHotkeys();
             if (_session != null) UpdateSession(_session);
+            UpdateSpectator();
+            UpdateOwnSpectateWait();
             RaceGuarantees.Update();
             InventoryLayout.Update();
             MenuUi.Update();
@@ -167,6 +169,9 @@ namespace WKRace.Mod
         private void LateUpdate()
         {
             long started = Perf.Start();
+            if (_spectator != null) _spectator.LateTick();
+            _hud.Spectating = _spectator;
+            _hud.Spectators = SpectatorsWatching;
             _hud.Draw(_session, _chat, _clientStatus, _link != null && _link.Connected, GameBridge.InMenu, VersionMismatch());
             _chatHud.Draw(null, _chat, null, false, false, null);
             Perf.Hud(started);
@@ -247,6 +252,15 @@ namespace WKRace.Mod
                     break;
 
                 case RacePhase.Done:
+                    // Still watching the rest of the match after being out of it: the session stays.
+                    if (_spectator != null) break;
+                    if (s.Spectating && Time.unscaledTime >= s.DoneUntil)
+                    {
+                        // Watched from outside, and over: back to the menu.
+                        EndSession();
+                        GameBridge.LeaveToMenu();
+                        break;
+                    }
                     if (Time.unscaledTime >= s.DoneUntil)
                     {
                         // A practice session stays (without its result panel) so that restarting in this world still
@@ -267,10 +281,15 @@ namespace WKRace.Mod
             }
             RaceSession s = _session;
             if (s == null) return;
-            bool show = RaceConfig.ShowGhost.Value && s.Phase == RacePhase.Racing && RaceRules.InRaceWorld;
+            Spectator sp = _spectator;
+            // Spectating, the players are always drawn (the one followed in first person: only their hands).
+            bool show = (RaceConfig.ShowGhost.Value && s.Phase == RacePhase.Racing || sp != null) && RaceRules.InRaceWorld;
             ENT_Player player = ENT_Player.playerObject;
             foreach (Rival rival in s.Rivals.Values)
+            {
+                rival.Ghost.HandsOnly = sp != null && sp.FirstPerson && sp.Racer == rival.Racer;
                 rival.Ghost.Tick(show && !rival.IsOut, _ghostColor, RaceConfig.GhostOpacity.Value, player != null ? player.cam : null);
+            }
         }
 
         private static void ClearGhosts(RaceSession s)
@@ -377,6 +396,9 @@ namespace WKRace.Mod
                 case ModSettings settings: OnModSettings(settings); break;
                 case VoiceActivity voice: _hud.SetVoice(voice); break;
                 case ErrorMessage error: _hud.Toast(error.Text, Hud.DeltaColor(1), 6f); break;
+                case SpectateStart spectate: OnSpectateStart(spectate); break;
+                case SpectateEnd spectateEnd: OnSpectateEnd(spectateEnd); break;
+                case SpectatorCount spectators: OnSpectatorCount(spectators); break;
             }
         }
 
@@ -395,6 +417,8 @@ namespace WKRace.Mod
                 return;
             }
 
+            if (_spectator != null) _spectator.Exit();
+            _spectator = null;
             DestroyGhosts(_session);
             _session = new RaceSession(found);
             // A match or run begins: the WKSR window has done its part and makes room for what the game shows next
@@ -454,6 +478,8 @@ namespace WKRace.Mod
         private static Rival RivalOf(RaceSession s, byte racer)
         {
             if (s == null || (racer == s.YourRacer && s.Party)) return null;
+            // A spectator has no racer of their own: everyone is someone else, by number.
+            if (s.Spectating) return s.RivalFor(racer);
             if (!s.Party) return s.Primary;
             return s.RivalFor(racer);
         }
@@ -720,6 +746,11 @@ namespace WKRace.Mod
         private void OnWorldReady(RaceSession s)
         {
             s.WorldInitialized = false;
+            if (s.Spectating)
+            {
+                BeginWatching(s);
+                return;
+            }
             int levels;
             s.WorldHash = GameBridge.WorldFingerprint(out levels);
             s.LevelCount = levels;
@@ -885,6 +916,11 @@ namespace WKRace.Mod
         {
             RaceSession s = _session;
             if (s == null || !RaceRules.InRaceWorld) return true;
+            if (s.Spectating || _spectator != null)
+            {
+                _hud.Toast("Spectating: there is no run of your own to restart.", 4f);
+                return false;
+            }
             if (s.Practice)
             {
                 RequestPracticeRestart(s);
@@ -915,6 +951,8 @@ namespace WKRace.Mod
 
         private void EndSession()
         {
+            if (_spectator != null) _spectator.Exit();
+            _spectator = null;
             DestroyGhosts(_session);
             _session = null;
             GameBridge.ThawWorld();
@@ -932,6 +970,21 @@ namespace WKRace.Mod
             GameBridge.ClearFreezeFlags();
             ClearGhosts(_session);
             RaceSession s = _session;
+            // Back on the menu from a world watched from outside: the watching is over.
+            if (s != null && s.Spectating)
+            {
+                if (_spectator != null) _spectator.Exit();
+                _spectator = null;
+                if (s.Phase != RacePhase.Done) _link.Send(new SpectateStop());
+                _session = null;
+                RaceRules.End();
+                return;
+            }
+            if (_spectator != null)
+            {
+                _spectator.Exit();
+                _spectator = null;
+            }
             if (s == null || s.Phase == RacePhase.Done)
             {
                 _session = null;

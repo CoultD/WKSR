@@ -294,8 +294,10 @@ namespace WKRace.Mod
             if (steam) SteamHeader(gui, vm);
             else Header(gui, vm, offline);
 
-            // A match or run (or its result) and the lobby room take the window over, whatever page was open.
-            if (vm.HasMatch) Match(gui, vm);
+            // A match or run (or its result), a match being watched and the lobby room take the window over, whatever
+            // page was open.
+            if (vm.IsWatching) Watching(gui, vm);
+            else if (vm.HasMatch) Match(gui, vm);
             else if (vm.ShowLobbyRoom) LobbyRoom(gui, vm);
             else
             {
@@ -477,12 +479,29 @@ namespace WKRace.Mod
                 gui.AddSpacing(8f);
                 if (gui.Button(vm.IsMuted(selected.Name) ? "UNMUTE" : "MUTE", new ImSize(150f, 40f))) vm.ToggleMute(selected.Name);
             }
+            if (!selected.You && selected.Watchable && vm.CanSpectate)
+            {
+                gui.AddSpacing(8f);
+                if (gui.Button("SPECTATE", new ImSize(170f, 40f))) vm.SpectatePlayer(selected);
+            }
             if (vm.CanJoinFromList(selected))
             {
                 gui.AddSpacing(8f);
                 if (gui.Button("JOIN GAME", new ImSize(170f, 40f))) vm.JoinFromList(selected);
             }
             gui.EndHorizontal();
+        }
+
+        // Watching a match: what the controls are, and the way out.
+        private static void Watching(ImGui gui, MainViewModel vm)
+        {
+            Title(gui, "SPECTATING", vm.WatchingText);
+            gui.Text("In the game: left click follows the next player, right click the one before. " + RaceConfig.SpectateViewKey.Value
+                     + " switches between first and third person; in third person the mouse looks around the player and the wheel zooms.", true);
+            gui.AddSpacing(6f);
+            gui.Text("Not 100% accurate: what you see is built from the positions the players send, in your own copy of their world. Doors, the goo and other events of their world can differ.", Dim, true);
+            gui.AddSpacing(12f);
+            if (gui.Button("STOP SPECTATING", new ImSize(260f, 44f))) vm.StopSpectating();
         }
 
         private static void PlayerProfile(ImGui gui, MainViewModel vm)
@@ -852,7 +871,8 @@ namespace WKRace.Mod
             {
                 gui.BeginHorizontal();
                 BrowseLine(gui, row.Host, row.Mode, row.Players, row.State, ToColor(row.Brush), width, false);
-                Command(gui, "JOIN", row.JoinCommand, new ImSize(80f, gui.GetRowHeight()));
+                if (row.WatchCommand != null) Command(gui, "WATCH", row.WatchCommand, new ImSize(90f, gui.GetRowHeight()));
+                else Command(gui, "JOIN", row.JoinCommand, new ImSize(80f, gui.GetRowHeight()));
                 gui.EndHorizontal();
                 gui.Text(row.Rules ?? "", Dim, true);
                 gui.AddSpacing(4f);

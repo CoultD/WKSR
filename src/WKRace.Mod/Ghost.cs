@@ -26,6 +26,8 @@ namespace WKRace.Mod
         private bool _holdLeft;
         private bool _holdRight;
         private float _targetYaw;
+        private float _targetPitch;
+        private float _pitch;
         private Vector3 _eye;
         private Vector3 _left;
         private Vector3 _right;
@@ -34,6 +36,12 @@ namespace WKRace.Mod
 
         public bool Visible { get; private set; }
         public Vector3 EyeWorld { get { return _eye; } }
+        public bool HasTarget { get { return _hasTarget; } }
+        // Where they look (smoothed like the position): for the spectator's first-person view.
+        public float Yaw { get { return _yaw; } }
+        public float Pitch { get { return _pitch; } }
+        // Spectating in first person: only the hands are drawn (the camera is at the eyes).
+        public bool HandsOnly;
 
         // Positions arrive in shared coordinates, without the game's floating-origin offset.
         public void SetTarget(OpponentState s)
@@ -41,6 +49,7 @@ namespace WKRace.Mod
             Vector3 offset = GameBridge.OriginOffset();
             _targetEye = new Vector3(s.X, s.Y, s.Z) + offset;
             _targetYaw = s.Yaw;
+            _targetPitch = s.Pitch;
             _holdLeft = (s.Flags & StateFlags.LeftHold) != 0;
             _holdRight = (s.Flags & StateFlags.RightHold) != 0;
             if (_holdLeft) _targetLeft = new Vector3(s.LeftX, s.LeftY, s.LeftZ) + offset;
@@ -54,6 +63,7 @@ namespace WKRace.Mod
                 _left = _targetLeft;
                 _right = _targetRight;
                 _yaw = _targetYaw;
+                _pitch = _targetPitch;
             }
             _hasTarget = true;
         }
@@ -78,11 +88,12 @@ namespace WKRace.Mod
             float k = 1f - Mathf.Exp(-18f * Time.unscaledDeltaTime);
             _eye = Vector3.Lerp(_eye, _targetEye, k);
             _yaw = Mathf.LerpAngle(_yaw, _targetYaw, k);
+            _pitch = Mathf.LerpAngle(_pitch, _targetPitch, k);
             if (_holdLeft) _left = Vector3.Lerp(_left, _targetLeft, k);
             if (_holdRight) _right = Vector3.Lerp(_right, _targetRight, k);
 
             float alpha = opacity;
-            if (viewer != null)
+            if (viewer != null && !HandsOnly)
             {
                 float distance = Vector3.Distance(viewer.transform.position, _eye);
                 if (distance < HideBelowDistance)
@@ -107,6 +118,13 @@ namespace WKRace.Mod
             c.a = alpha;
             _material.color = c;
             SetVisible(true);
+            bool body = !HandsOnly;
+            if (_head.gameObject.activeSelf != body)
+            {
+                _head.gameObject.SetActive(body);
+                _body.gameObject.SetActive(body);
+                _nose.gameObject.SetActive(body);
+            }
         }
 
         public void Destroy()
