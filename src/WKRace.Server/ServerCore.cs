@@ -135,6 +135,12 @@ namespace WKRace.Server
                 case RunNote runNote:
                     HandleRunNote(player, runNote);
                     break;
+                case SpectateRequest spectate:
+                    HandleSpectateRequest(player, spectate);
+                    break;
+                case SpectateStop _:
+                    HandleSpectateStop(player);
+                    break;
                 case VoiceState voiceState:
                     HandleVoiceState(player, voiceState);
                     break;
@@ -204,6 +210,7 @@ namespace WKRace.Server
 
             player.Conn = null;
             player.PendingMods = null;
+            StopWatching(player, null);
             DropVoice(player);
             RemoveFromQueue(player);
             // Someone racing stays in their lobby until the race is over (ReturnToLobby lets them go then).

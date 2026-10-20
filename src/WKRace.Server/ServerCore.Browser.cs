@@ -28,6 +28,7 @@ namespace WKRace.Server
                 LobbySegments = BuildTag.AtLeast(player.ClientVersion, SegmentsVersion),
                 KeepRunning = BuildTag.AtLeast(player.ClientVersion, KeepRunningVersion),
                 PlayerList = PlayerListEnabled && BuildTag.AtLeast(player.ClientVersion, PlayerListVersion),
+                Spectate = BuildTag.AtLeast(player.ClientVersion, SpectateVersion),
             });
         }
 

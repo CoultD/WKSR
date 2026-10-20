@@ -99,6 +99,12 @@ namespace WKRace.Protocol
         ModsRequest = 96,
         ModsPage = 97,
         ModMark = 98,
+        // Spectating (SpectateMessages.cs).
+        SpectateRequest = 100,
+        SpectateStart = 101,
+        SpectateStop = 102,
+        SpectateEnd = 103,
+        SpectatorCount = 104,
     }
 
     public enum ErrorCode : byte

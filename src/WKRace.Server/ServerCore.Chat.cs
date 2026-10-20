@@ -44,8 +44,12 @@ namespace WKRace.Server
             }
             else if (player.Match != null)
             {
-                to = player.Match.Slots.Select(s => s.Player);
+                to = player.Match.Slots.Select(s => s.Player).Concat(player.Match.Audience.Spectators).Distinct();
                 if (player.Lobby != null) kept = player.Lobby.Chat;
+            }
+            else if (player.Watching != null)
+            {
+                to = AudienceRoom(player.Watching);
             }
             else if (player.Lobby != null)
             {
@@ -112,7 +116,12 @@ namespace WKRace.Server
             }
             else if (player.Match != null)
             {
-                to = player.Match.Slots.Select(s => s.Player);
+                to = player.Match.Slots.Select(s => s.Player).Concat(player.Match.Audience.Spectators).Distinct();
+                room = ChatRooms.Match;
+            }
+            else if (player.Watching != null)
+            {
+                to = AudienceRoom(player.Watching);
                 room = ChatRooms.Match;
             }
             else if (player.Lobby != null)

@@ -64,6 +64,9 @@ namespace WKRace.Server
         public long LastProfileMs = long.MinValue / 2;
         public long LastRunNoteFinishMs = long.MinValue / 2;
         public long LastRunNoteRestartMs = long.MinValue / 2;
+        // Spectating (ServerCore.Spectate): the audience this player is in, and the one of their own ranked solo runs.
+        public Audience Watching;
+        public Audience SoloAudience;
         // Reported by the client: is the game (with the mod) attached to it.
         public bool GameConnected = true;
         // Lobby creates and joins in the last minute.
@@ -92,6 +95,15 @@ namespace WKRace.Server
         {
             if (Conn != null) Conn.Send(message);
         }
+    }
+
+    // Who watches a match or the ranked solo runs of one player (ServerCore.Spectate).
+    internal sealed class Audience
+    {
+        // What is watched: a match, or the player whose ranked solo runs are.
+        public Match Match;
+        public Player Solo;
+        public readonly List<Player> Spectators = new List<Player>();
     }
 
     internal sealed class QueueEntry
@@ -206,6 +218,12 @@ namespace WKRace.Server
         // When play continues after the last pause.
         public long ResumeAtMs;
         public readonly List<Slot> Slots = new List<Slot>();
+        public readonly Audience Audience;
+
+        public Match()
+        {
+            Audience = new Audience { Match = this };
+        }
 
         // The ready check: when it ends, or -1 while it has not started.
         public long ReadyDeadlineMs = -1;

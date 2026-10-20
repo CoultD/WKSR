@@ -108,6 +108,8 @@ namespace WKRace.Protocol
         public bool BansDone { get { return _step != Step.Banning; } }
         // Past the countdown's start and not over yet.
         public bool Running { get { return _step == Step.Running; } }
+        // GO on the server clock (0 before it).
+        public long GoMs { get { return _goMs; } }
 
         // What the game is told about the best run it races (PracticeMark).
         public PracticeMark Mark()

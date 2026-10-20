@@ -66,6 +66,7 @@ namespace WKRace.Server
                     slot.Watch = new TimerWatch();
                 }
                 match.Slots.Add(slot);
+                StopWatching(p, "Your own match is starting.");
                 p.Match = match;
             }
             _matches[match.Id] = match;
@@ -169,12 +170,15 @@ namespace WKRace.Server
             return slot.Ready ? RacerStatus.Ready : slot.Loaded ? RacerStatus.Loaded : RacerStatus.Loading;
         }
 
+        // The racer number a spectator's roster gives them: none of the match's.
+        internal const byte SpectatorRacer = 255;
+
         private MatchRoster RosterFor(Match match, Slot to, long now)
         {
             var roster = new MatchRoster
             {
                 MatchId = match.Id,
-                YourRacer = to.Racer,
+                YourRacer = to != null ? to.Racer : SpectatorRacer,
                 ReadySecondsLeft = match.Phase == MatchPhase.Preparing && match.ReadyDeadlineMs >= 0
                     ? (int)Math.Max(0, (match.ReadyDeadlineMs - now + 999) / 1000) : -1,
             };
@@ -191,6 +195,7 @@ namespace WKRace.Server
         {
             long now = _now();
             foreach (Slot slot in match.Slots) slot.Player.Send(RosterFor(match, slot, now));
+            RosterToAudience(match);
         }
 
         // ---- presence and pausing ------------------------------------------
@@ -425,9 +430,15 @@ namespace WKRace.Server
             Slot survivor = SurvivorOf(match, player);
             if (survivor != null)
             {
-                // Nobody to pass it on to; kept for the run's replay and its timer.
+                // Kept for the run's replay and its timer, and passed on to those who watch.
                 if (state.RaceTimeMs > survivor.GameMs) survivor.GameMs = state.RaceTimeMs;
                 survivor.Recorder?.Add(state);
+                if (match.Audience.Spectators.Count > 0)
+                {
+                    var watched = new OpponentState { Racer = survivor.Racer };
+                    watched.CopyFrom(state);
+                    ToAudience(match, watched);
+                }
                 return;
             }
             Promote(match);
@@ -448,6 +459,7 @@ namespace WKRace.Server
             relay.CopyFrom(state);
             foreach (Slot slot in match.Slots)
                 if (slot != from) slot.Player.Send(relay);
+            ToAudience(match, relay);
         }
 
         private void HandleSplit(Player player, SplitReached split)
@@ -470,6 +482,7 @@ namespace WKRace.Server
             OpponentSplit relay = ToOpponentSplit(split, slot);
             foreach (Slot other in match.Slots)
                 if (other != slot) other.Player.Send(relay);
+            ToAudience(match, relay);
         }
 
         private static OpponentSplit ToOpponentSplit(SplitReached s, Slot from)
@@ -495,6 +508,7 @@ namespace WKRace.Server
             var relay = new OpponentAttempt { Attempt = attempt.Attempt, RaceTimeMs = attempt.RaceTimeMs, Racer = slot.Racer };
             foreach (Slot other in match.Slots)
                 if (other != slot) other.Player.Send(relay);
+            ToAudience(match, relay);
         }
 
         private void HandleFinished(Player player, PlayerFinished finished)
@@ -554,6 +568,7 @@ namespace WKRace.Server
             var relay = new OpponentFinished { Attempt = finished.Attempt, RaceTimeMs = slot.FinishMs, Racer = slot.Racer };
             foreach (Slot other in match.Slots)
                 if (other != slot) other.Player.Send(relay);
+            ToAudience(match, relay);
 
             if (match.Party)
             {
@@ -848,6 +863,7 @@ namespace WKRace.Server
                 a.Player.Match = null;
                 b.Player.Match = null;
                 _matches.Remove(match.Id);
+                EndAudience(match.Audience, "The match is over: " + reason);
             }
             SendVoicePeers(new[] { a.Player, b.Player });
             _log("match " + Short(match) + " complete: " + reason);

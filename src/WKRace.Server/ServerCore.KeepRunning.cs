@@ -48,6 +48,7 @@ namespace WKRace.Server
             if (why != null) _log("match " + Short(match) + ": " + slot.Name + " " + why);
             if (slot.Player.Match == match) slot.Player.Match = null;
             _matches.Remove(match.Id);
+            EndAudience(match.Audience, slot.Name + "'s run is over.");
             ReturnToLobby(match);
         }
 

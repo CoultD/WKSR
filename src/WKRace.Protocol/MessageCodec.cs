@@ -102,6 +102,11 @@ namespace WKRace.Protocol
                 case MessageType.ProfileRequest: m = ProfileRequest.Read(r); break;
                 case MessageType.Profile: m = Profile.Read(r); break;
                 case MessageType.RunNote: m = RunNote.Read(r); break;
+                case MessageType.SpectateRequest: m = SpectateRequest.Read(r); break;
+                case MessageType.SpectateStart: m = SpectateStart.Read(r); break;
+                case MessageType.SpectateStop: m = SpectateStop.Read(r); break;
+                case MessageType.SpectateEnd: m = SpectateEnd.Read(r); break;
+                case MessageType.SpectatorCount: m = SpectatorCount.Read(r); break;
                 case MessageType.VoiceHello: m = VoiceHello.Read(r); break;
                 case MessageType.VoiceState: m = VoiceState.Read(r); break;
                 case MessageType.VoicePeers: m = VoicePeers.Read(r); break;

@@ -24,16 +24,6 @@ namespace WKRace.Server
             return PlayerActivity.Online;
         }
 
-        // In a match or ranked solo run that is under way.
-        private static bool Watchable(Player p)
-        {
-            if (p.Solo != null) return p.Solo.Host.Running;
-            Match m = p.Match;
-            if (m == null) return false;
-            if (m.Survivor != null) return m.Survivor.Player == p;
-            return m.ClockStarted;
-        }
-
         // The lobby `p` is in, when `asker` could join it right now from the list (else 0).
         private static uint JoinableLobby(Player p, Player asker)
         {

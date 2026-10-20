@@ -182,6 +182,7 @@ namespace WKRace.Server
                 slot.Player.Match = null;
             }
             _matches.Remove(match.Id);
+            EndAudience(match.Audience, "The match is over: " + reason);
             SendVoicePeers(match.Slots.Select(s => s.Player));
             _log("match " + Short(match) + " complete: " + reason + (aborted ? "" : " Winner " + ranked[0].Name + "."));
             ReturnToLobby(match);

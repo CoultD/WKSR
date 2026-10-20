@@ -85,6 +85,47 @@ namespace WKRace.Server
             _log(player.Record.Name + (run.Runs == 1 ? " started a ranked solo run" : " restarted their ranked solo run (run " + run.Runs + ")") + SegmentNote(segment) + ", seed " + run.Seed
                  + (gameBuild.Length > 0 && run.Runs == 1 ? " (" + gameBuild + ")" : ""));
             run.Host.Start();
+            if (player.SoloAudience != null)
+                foreach (Player p in player.SoloAudience.Spectators) p.Send(SoloSpectateStart(player));
+        }
+
+        // ---- watching ------------------------------------------------------------------------------------------
+
+        // The racer number of a ranked solo run's player (as its host gives it).
+        private const byte SoloRacer = 1;
+
+        private static bool SoloWatchable(Player p)
+        {
+            return p.Solo != null && p.Solo.Host.BansDone;
+        }
+
+        private static Audience SoloAudience(Player p)
+        {
+            return p.SoloAudience ?? (p.SoloAudience = new Audience { Solo = p });
+        }
+
+        private SpectateStart SoloSpectateStart(Player p)
+        {
+            SoloRun run = p != null ? p.Solo : null;
+            if (run == null) return null;
+            return new SpectateStart
+            {
+                MatchId = run.Host.Match.MatchId,
+                Seed = run.Seed,
+                Mode = MatchMode.Solo,
+                Rules = run.Host.Match.Rules,
+                Ranked = true,
+                Competitive = _options.Competitive,
+                Segment = run.Segment,
+                GoServerTimeMs = run.Host.GoMs,
+                WatchRacer = SoloRacer,
+                Bans = new List<string>(run.Host.Banned),
+            };
+        }
+
+        private static Guid SoloMatchId(Player p)
+        {
+            return p != null && p.Solo != null ? p.Solo.Host.Match.MatchId : Guid.Empty;
         }
 
         // " (Silos segment)" for a segment run, for the log.
@@ -110,6 +151,9 @@ namespace WKRace.Server
                 _soloPlayers.Remove(player);
                 player.LastSolo = run;
             }
+            EndAudience(player.SoloAudience, result.Outcome == MatchOutcome.Win && result.YourTimeMs >= 0
+                ? player.Record.Name + " finished their run in " + RaceFormat.Time(result.YourTimeMs) + "."
+                : player.Record.Name + "'s run is over.");
             if (result.Outcome == MatchOutcome.Win && result.YourTimeMs >= 0)
             {
                 CountFinishedRun(player, true, run.Segment);
@@ -134,6 +178,12 @@ namespace WKRace.Server
                     {
                         run.Recorder.Add(state);
                         if (_options.TimerCheck) run.Watch.Report(_now(), state.RaceTimeMs, state.X, state.Y, state.Z);
+                        if (player.SoloAudience != null && player.SoloAudience.Spectators.Count > 0)
+                        {
+                            var watched = new OpponentState { Racer = SoloRacer };
+                            watched.CopyFrom(state);
+                            foreach (Player p in player.SoloAudience.Spectators) p.Send(watched);
+                        }
                     }
                     return true;
                 case SplitReached split:
@@ -142,6 +192,9 @@ namespace WKRace.Server
                     split.Region = NameSanitizer.CleanLabel(split.Region);
                     if (run.Host.Running) run.Recorder.Add(split);
                     run.Host.OnMessage(split);
+                    if (player.SoloAudience != null && run.Host.Running)
+                        foreach (Player p in player.SoloAudience.Spectators)
+                            p.Send(new OpponentSplit { Attempt = 1, Index = split.Index, Level = split.Level, Region = split.Region, RaceTimeMs = split.RaceTimeMs, Racer = SoloRacer });
                     return true;
                 case BanReady _:
                 case BanPick _:
@@ -212,6 +265,7 @@ namespace WKRace.Server
             if (run == null) return;
             player.Solo = null;
             _soloPlayers.Remove(player);
+            EndAudience(player.SoloAudience, player.Record.Name + " left their run.");
             if (why != null) _log(player.Record.Name + "'s ranked solo run was dropped: " + why);
         }
 

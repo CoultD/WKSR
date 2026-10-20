@@ -161,6 +161,27 @@ namespace WKRace.Server
         {
         }
 
+        // Ranked solo runs (and so watching them) are the official server's.
+        private static bool SoloWatchable(Player p)
+        {
+            return false;
+        }
+
+        private static Audience SoloAudience(Player p)
+        {
+            return null;
+        }
+
+        private SpectateStart SoloSpectateStart(Player p)
+        {
+            return null;
+        }
+
+        private static Guid SoloMatchId(Player p)
+        {
+            return Guid.Empty;
+        }
+
         // The online player list and profiles are the official server's.
         private bool PlayerListEnabled { get { return false; } }
 
