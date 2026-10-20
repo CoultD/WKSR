@@ -386,9 +386,14 @@ namespace WKRace.Client
             _timer.Tick += (s, e) => OnTimer();
             _timer.Start();
             UpdateGameText();
-            // Only a player who pressed CONNECT (kept from the last time) is signed in. Signing in waits a moment
-            // for Steam, so the very first sign-in already carries the Steam name.
-            if (_settings.Online) _connectDue = DateTime.UtcNow.AddSeconds(4);
+            // Every start begins offline: the player picks CONNECT (the WKSR server) or STEAM LOBBIES each time, so it
+            // is always clear which one they are on (0.9.6). A choice left in the settings file is cleared.
+            if (_settings.Online || _settings.SteamLobbies)
+            {
+                _settings.Online = false;
+                _settings.SteamLobbies = false;
+                _settings.Save();
+            }
             InitEdition();
         }
 
