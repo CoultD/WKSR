@@ -35,6 +35,69 @@ namespace WKRace.Mod
         internal static bool AllowDeath;
 
         internal Spectator Spectating { get { return _spectator; } }
+
+        // ---- what happens in the players' worlds (RunEvents) ------------------------------------------------------
+
+        // A racer reports what happens in their world while their run counts: a match (not watched by this player) or
+        // a ranked solo run; never an unranked run, which nobody can watch.
+        internal bool ReportsRunEvents
+        {
+            get
+            {
+                RaceSession s = _session;
+                return s != null && !s.Spectating && _spectator == null && (!s.Practice || s.RankedSolo) && s.Phase == RacePhase.Racing
+                       && RaceRules.InRaceWorld && _link != null && _link.Connected;
+            }
+        }
+
+        internal void SendRunEvent(RunEvent e)
+        {
+            RaceSession s = _session;
+            if (s == null) return;
+            e.RaceTimeMs = Math.Max(0, s.RaceMs);
+            _link.Send(e);
+        }
+
+        private float _nextReplay;
+
+        private void OnOpponentEvent(OpponentEvent e)
+        {
+            RaceSession s = _session;
+            if (s == null) return;
+            if (e.Kind == RunEventKind.ItemUsed)
+            {
+                Rival who;
+                if (!e.History && (_spectator != null || s.Spectating) && s.Rivals.TryGetValue(e.Racer, out who))
+                    _hud.Feed(who.Name + " used " + e.Name);
+                return;
+            }
+            s.PendingEvents.Add(e);
+        }
+
+        // A few times a second while spectating: what the followed player set off in their world, set off here too
+        // (as soon as its level is loaded).
+        private void ReplayEvents()
+        {
+            Spectator sp = _spectator;
+            RaceSession s = _session;
+            if (sp == null || s == null || s.PendingEvents.Count == 0 || Time.unscaledTime < _nextReplay) return;
+            _nextReplay = Time.unscaledTime + 0.25f;
+            for (int i = 0; i < s.PendingEvents.Count; i++)
+            {
+                OpponentEvent e = s.PendingEvents[i];
+                if (e.Racer != sp.Racer) continue;
+                bool done;
+                try { done = RunEvents.Replay(e); }
+                catch (Exception ex)
+                {
+                    Plugin.Log.LogWarning("Could not replay " + e.Name + ": " + ex.Message);
+                    done = true;
+                }
+                if (!done) continue;
+                if (RaceConfig.Verbose) Plugin.Log.LogDebug("Replayed " + e.Kind + " " + e.Name);
+                s.PendingEvents.RemoveAt(i--);
+            }
+        }
         internal RacePhase SessionPhase { get { return _session != null ? _session.Phase : RacePhase.Done; } }
 
         // How many watch this player's match or run (0 when none, or another match's count).
@@ -153,6 +216,7 @@ namespace WKRace.Mod
                 sp.FollowLeaderIfOut();
                 _watchedOutAt = -1f;
             }
+            ReplayEvents();
             if (MenuUi.IsOpen || GameBridge.GamePaused || ChatInputBlock.Active) return;
             if (Input.GetMouseButtonDown(0)) sp.Next(1);
             if (Input.GetMouseButtonDown(1)) sp.Next(-1);

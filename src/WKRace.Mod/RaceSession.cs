@@ -149,6 +149,8 @@ namespace WKRace.Mod
         // Watching a match from outside (RaceController.Spectate), and the racer to follow first.
         public bool Spectating;
         public byte WatchStart;
+        // What the players set off in their worlds, not yet set off in this one (RunEvents, while spectating).
+        public readonly List<OpponentEvent> PendingEvents = new List<OpponentEvent>();
         // A solo run of a segment (Segments): it ends where the segment does. 0: the whole climb.
         public readonly byte Segment;
         // "SILOS SEGMENT", or "" for the whole climb.

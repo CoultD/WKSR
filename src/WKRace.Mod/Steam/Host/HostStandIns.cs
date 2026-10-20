@@ -182,6 +182,11 @@ namespace WKRace.Server
             return Guid.Empty;
         }
 
+        private static IEnumerable<OpponentEvent> SoloEvents(Player p)
+        {
+            return new List<OpponentEvent>();
+        }
+
         // The online player list and profiles are the official server's.
         private bool PlayerListEnabled { get { return false; } }
 

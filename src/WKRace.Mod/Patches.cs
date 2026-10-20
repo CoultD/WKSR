@@ -32,6 +32,7 @@ namespace WKRace.Mod
             Guarded(() => InventoryLayout.Apply(harmony));
             Guarded(() => CompetitiveUnlock.Apply(harmony));
             Guarded(() => PlayerCheck.Apply(harmony));
+            Guarded(() => RunEvents.Apply(harmony));
         }
 
         // Imui scrolls half a line of text for a notch of the mouse wheel, which makes the options window and the
@@ -103,9 +104,12 @@ namespace WKRace.Mod
             if (GameBridge.Frozen) Time.timeScale = 0f;
         }
 
-        private static void WinPrefix()
+        private static bool WinPrefix()
         {
+            // A spectator's world never ends with a win of its own (a replayed event can reach the game's end).
+            if (RaceController.Current != null && RaceController.Current.Spectating != null) return false;
             Guarded(() => { if (RaceController.Current != null) RaceController.Current.OnLocalWin(); });
+            return true;
         }
 
         // Die returns at once when the player is already dead, and revives instead when a saved checkpoint exists

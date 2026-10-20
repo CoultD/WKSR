@@ -56,7 +56,9 @@ namespace WKRace.Server
                    "while they are open. A lobby its host makes public is shown in the lobby browser to every connected " +
                    "player, with the host's name, the mode and modifiers and how many players are in it. While you are connected, you are " +
                    "shown in the <b>players online</b> list to every connected player, with what you are doing (searching, in a match, " +
-                   "in a lobby). Nothing is sold, shared with " +
+                   "in a lobby). While you play a ranked match, a ranked solo run or a public lobby's match, other connected players can " +
+                   "<b>watch</b> it: they get your position and progress as your opponents do, the items you use and the buttons and " +
+                   "triggers you set off. Nothing of it is stored after the match. Nothing is sold, shared with " +
                    "advertisers or used for anything except running the matches.</p>" +
 
                    "<h2>Your IP address</h2>" +

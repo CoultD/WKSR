@@ -62,6 +62,30 @@ namespace WKRace.Mod
         public Spectator Spectating;
         public int Spectators;
 
+        // Spectating: "Alex used Syringe" lines on the right, for a few seconds each.
+        private readonly List<ToastEntry> _feed = new List<ToastEntry>();
+        private const int MaxFeedLines = 5;
+        private const float FeedSeconds = 6f;
+
+        public void Feed(string text)
+        {
+            _feed.Add(new ToastEntry { Text = text, Color = Neutral, Until = Time.unscaledTime + FeedSeconds });
+            if (_feed.Count > MaxFeedLines) _feed.RemoveAt(0);
+        }
+
+        private void DrawFeed()
+        {
+            float now = Time.unscaledTime;
+            _feed.RemoveAll(f => f.Until <= now);
+            float y = _vh * 0.42f;
+            foreach (ToastEntry f in _feed)
+            {
+                float alpha = Mathf.Clamp01((f.Until - now) / 1.5f);
+                Label(_vw - 520f, y, 500f, 22f, f.Text, 16, new Color(1f, 0.85f, 0.45f, alpha), TextAlignmentOptions.Right);
+                y += 24f;
+            }
+        }
+
         // The party position (1 = first) last worked out by the race controller.
         public int CurrentPlace { get { return _place; } }
 
@@ -285,7 +309,11 @@ namespace WKRace.Mod
             DrawGhostMarkers(s);
             DrawBanners(s, linkUp, center);
             DrawFooter(s);
-            if (Spectating != null) DrawSpectating(s, Spectating, center);
+            if (Spectating != null)
+            {
+                DrawSpectating(s, Spectating, center);
+                DrawFeed();
+            }
             else if (Spectators > 0) DrawSpectatorCount();
         }
 

@@ -21,6 +21,8 @@ namespace WKRace.Server
         // The server's own recording of the run, and its check of the timer (see ServerCore.Boards).
         public RunRecorder Recorder;
         public TimerWatch Watch = new TimerWatch();
+        // What happened in the run's world (RunEvent), for spectators.
+        public readonly List<OpponentEvent> Events = new List<OpponentEvent>();
     }
 
     public sealed partial class ServerCore
@@ -123,6 +125,11 @@ namespace WKRace.Server
             };
         }
 
+        private static IEnumerable<OpponentEvent> SoloEvents(Player p)
+        {
+            return p != null && p.Solo != null ? p.Solo.Events : new List<OpponentEvent>();
+        }
+
         private static Guid SoloMatchId(Player p)
         {
             return p != null && p.Solo != null ? p.Solo.Host.Match.MatchId : Guid.Empty;
@@ -207,6 +214,14 @@ namespace WKRace.Server
                     return true;
                 case PracticeRestart restart:
                     RestartSolo(player, run, restart);
+                    return true;
+                case RunEvent e:
+                    if (!run.Host.Running || e.Kind == 0 || e.Kind > RunEventKind.Max || !EventAllowed(player)) return true;
+                    e.Name = NameSanitizer.CleanLabel(e.Name);
+                    OpponentEvent relay = OpponentEvent.From(e, SoloRacer);
+                    Keep(run.Events, relay);
+                    if (player.SoloAudience != null)
+                        foreach (Player p in player.SoloAudience.Spectators) p.Send(relay);
                     return true;
             }
             return false;

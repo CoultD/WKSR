@@ -102,6 +102,10 @@ namespace WKRace.Server
                     if (s.Finished) player.Send(new OpponentFinished { Attempt = s.Attempt, RaceTimeMs = s.FinishMs, Racer = s.Racer });
                 }
             }
+            if (match != null)
+                foreach (Slot s in match.Slots)
+                    if (s.Player != player) SendEventHistory(player, s.Events);
+            if (audience.Solo != null) SendEventHistory(player, SoloEvents(audience.Solo));
             _log(player.Record.Name + " watches " + AudienceName(audience));
             SendSpectatorCount(audience);
         }
@@ -135,6 +139,50 @@ namespace WKRace.Server
             foreach (Slot s in match.Slots)
                 if (s.Active && (best == null || s.Splits.Count > best.Splits.Count)) best = s;
             return best ?? match.Slots[0];
+        }
+
+        // ---- what happens in the players' worlds -----------------------------------------------------------------
+
+        private const int MaxKeptEvents = 400;
+        private const int EventWindowMs = 5000;
+        private const int MaxEventsPerWindow = 40;
+
+        // A racer's RunEvent: kept for later spectators, and passed on to those watching now.
+        private void HandleRunEvent(Player player, RunEvent e)
+        {
+            if (e.Kind == 0 || e.Kind > RunEventKind.Max || !EventAllowed(player)) return;
+            Match match = player.Match;
+            if (match == null) return;
+            Slot slot = match.SlotOf(player);
+            if (slot == null || !(slot.Active && match.ClockStarted || match.Survivor == slot)) return;
+            e.Name = NameSanitizer.CleanLabel(e.Name);
+            OpponentEvent relay = OpponentEvent.From(e, slot.Racer);
+            Keep(slot.Events, relay);
+            foreach (Player p in match.Audience.Spectators)
+                if (p != player) p.Send(relay);
+        }
+
+        private bool EventAllowed(Player player)
+        {
+            long now = _now();
+            Queue<long> times = player.EventTimes;
+            while (times.Count > 0 && times.Peek() <= now - EventWindowMs) times.Dequeue();
+            if (times.Count >= MaxEventsPerWindow) return false;
+            times.Enqueue(now);
+            return true;
+        }
+
+        private static void Keep(List<OpponentEvent> events, OpponentEvent e)
+        {
+            events.Add(e);
+            if (events.Count > MaxKeptEvents) events.RemoveRange(0, events.Count - MaxKeptEvents);
+        }
+
+        // A spectator who comes in catches up on what already happened (no lines are shown for it).
+        private static void SendEventHistory(Player to, IEnumerable<OpponentEvent> events)
+        {
+            foreach (OpponentEvent e in events)
+                to.Send(new OpponentEvent { Racer = e.Racer, Kind = e.Kind, Name = e.Name, X = e.X, Y = e.Y, Z = e.Z, RaceTimeMs = e.RaceTimeMs, History = true });
         }
 
         private void HandleSpectateStop(Player player)

@@ -141,6 +141,9 @@ namespace WKRace.Server
                 case SpectateStop _:
                     HandleSpectateStop(player);
                     break;
+                case RunEvent runEvent:
+                    HandleRunEvent(player, runEvent);
+                    break;
                 case VoiceState voiceState:
                     HandleVoiceState(player, voiceState);
                     break;

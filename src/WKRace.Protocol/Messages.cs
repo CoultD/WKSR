@@ -105,6 +105,9 @@ namespace WKRace.Protocol
         SpectateStop = 102,
         SpectateEnd = 103,
         SpectatorCount = 104,
+        // What happens in a player's world, for spectators (RunEventMessages.cs).
+        RunEvent = 105,
+        OpponentEvent = 106,
     }
 
     public enum ErrorCode : byte

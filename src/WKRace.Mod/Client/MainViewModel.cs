@@ -794,6 +794,7 @@ namespace WKRace.Client
                 case SpectateStart spectateStart: OnSpectateStart(spectateStart); break;
                 case SpectateEnd spectateEnd: OnSpectateEnd(spectateEnd); break;
                 case SpectatorCount spectators: ToMod(spectators); break;
+                case OpponentEvent opponentEvent: ToMod(opponentEvent); break;
                 case OnlineList onlineList: OnOnlineList(onlineList); break;
                 case Profile profile: OnProfile(profile); break;
                 case ChatTypingNote typingNote: OnTypingNote(typingNote); break;
@@ -1357,6 +1358,11 @@ namespace WKRace.Client
                 case SpectateRequest _:
                 case SpectateStop _:
                     OnModSpectate(message);
+                    break;
+
+                // What happens in this player's world, for spectators: only for runs the server has.
+                case RunEvent _:
+                    if (_spectateKnown && _server != null && _link == LinkState.Connected && _practice == null && (_matchActive || _rankedSolo)) _server.Send(message);
                     break;
 
                 case PlayerForfeit _:

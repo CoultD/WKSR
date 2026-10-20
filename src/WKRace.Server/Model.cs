@@ -67,6 +67,8 @@ namespace WKRace.Server
         // Spectating (ServerCore.Spectate): the audience this player is in, and the one of their own ranked solo runs.
         public Audience Watching;
         public Audience SoloAudience;
+        // RunEvents sent recently (rate limit).
+        public readonly Queue<long> EventTimes = new Queue<long>();
         // Reported by the client: is the game (with the mod) attached to it.
         public bool GameConnected = true;
         // Lobby creates and joins in the last minute.
@@ -188,6 +190,8 @@ namespace WKRace.Server
         public List<string> BanPool;
         // Party: this player was told they are the last one standing (LastStanding).
         public bool LastStandingSent;
+        // What happened in their world (RunEvent), for spectators who come later; the oldest go first.
+        public readonly List<OpponentEvent> Events = new List<OpponentEvent>();
 
         // Still racing: neither finished nor out.
         public bool Active { get { return !Finished && !Out && !Forfeited && !Died && !Cheated; } }

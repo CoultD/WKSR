@@ -146,9 +146,12 @@ namespace WKRace.Mod
                     Wait(4f);
                     Shot("spectate-3-third-person");
                     Do(() => Plugin.Log.LogInfo("WKSR menu test: spectating " + RaceController.Current.Spectating.WatchedName + " at " + ENT_Player.playerObject.transform.position));
+#if DEBUG
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: replay check: " + RunEvents.ReplayNearestForTest()));
+#endif
                     Wait(6f);
                     Shot("spectate-4-later");
-                    Do(() => { RaceController.Current.Spectating.Next(1); Plugin.Log.LogInfo("WKSR menu test: now spectating " + RaceController.Current.Spectating.WatchedName); });
+                    Do(() => { Plugin.Log.LogInfo("WKSR menu test: before next: " + RaceController.Current.Spectating.Describe()); RaceController.Current.Spectating.Next(1); Plugin.Log.LogInfo("WKSR menu test: now spectating " + RaceController.Current.Spectating.WatchedName + ", " + RaceController.Current.Spectating.Describe()); });
                     Wait(3f);
                     Shot("spectate-5-other-player");
                     Do(() => RaceController.Current.Spectating.ToggleView());

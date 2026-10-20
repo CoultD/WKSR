@@ -38,6 +38,7 @@ namespace WKRace.DevTools
             public int DieAt = -1;            // race seconds at which to die, or -1
             public bool Afk;                  // never press ready and never climb (stands at the bottom)
             public string Say;                // a chat line to send once in the lobby or race
+            public string UseItem;            // an item "used" every 10 s while racing (spectators see a line)
             public int TypeFor;               // seconds of "typing..." before that line
             public double OffsetX, OffsetZ;   // where the bot climbs, relative to the start (to spread several out)
             public double VoicePitch;          // speak a test tone at this pitch (Hz) through the voice relay, or 0
@@ -52,6 +53,7 @@ namespace WKRace.DevTools
             public bool Started, Paused, Finished, Dropped;
             public int NextSplit;
             public long NextState;
+            public long NextItem = 3000;
         }
 
         private static bool InLobby(Options o)
@@ -85,6 +87,7 @@ namespace WKRace.DevTools
                     case "--die-at": o.DieAt = int.Parse(next, CultureInfo.InvariantCulture); i++; break;
                     case "--afk": o.Afk = true; break;
                     case "--say": o.Say = next; i++; break;
+                    case "--use-item": o.UseItem = next; i++; break;
                     case "--type-for": o.TypeFor = int.Parse(next, CultureInfo.InvariantCulture); i++; break;
                     case "--voice": o.VoicePitch = next != null && !next.StartsWith("--") ? double.Parse(next, CultureInfo.InvariantCulture) : 220; if (next != null && !next.StartsWith("--")) i++; break;
                     case "--offset":
@@ -318,6 +321,11 @@ namespace WKRace.DevTools
                     }
 
                     double climbed = o.Speed * raceMs / 1000.0;
+                    if (o.UseItem != null && raceMs >= race.NextItem)
+                    {
+                        race.NextItem = raceMs + 10000;
+                        send(new RunEvent { Kind = RunEventKind.ItemUsed, Name = o.UseItem, RaceTimeMs = (int)raceMs });
+                    }
                     if (raceMs >= race.NextState)
                     {
                         race.NextState = raceMs + 66;

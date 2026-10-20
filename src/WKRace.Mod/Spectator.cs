@@ -69,6 +69,14 @@ namespace WKRace.Mod
             return list;
         }
 
+        // For the log: the players that can be followed, and who is followed.
+        public string Describe()
+        {
+            var parts = new List<string>();
+            foreach (Rival r in _session.Rivals.Values) parts.Add(r.Racer + ":" + r.Name + (r.IsOut ? " out" : "") + (r.Finished ? " finished" : ""));
+            return "following " + _racer + " of [" + string.Join(", ", parts) + "]";
+        }
+
         public void Next(int step)
         {
             List<Rival> list = Followable();

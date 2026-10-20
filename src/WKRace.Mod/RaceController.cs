@@ -399,6 +399,7 @@ namespace WKRace.Mod
                 case SpectateStart spectate: OnSpectateStart(spectate); break;
                 case SpectateEnd spectateEnd: OnSpectateEnd(spectateEnd); break;
                 case SpectatorCount spectators: OnSpectatorCount(spectators); break;
+                case OpponentEvent opponentEvent: OnOpponentEvent(opponentEvent); break;
             }
         }
 

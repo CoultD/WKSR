@@ -214,6 +214,37 @@ namespace WKRace.Tests
         }
 
         [Fact]
+        public void WorldEvents_ReachSpectators_AndLateOnesCatchUp()
+        {
+            using (var h = new Harness())
+            {
+                TestClient a, b;
+                Ranked(h, out a, out b);
+                a.Send(new RunEvent { Kind = RunEventKind.Button, Name = "Button<b>", X = 1, Y = 50, Z = 2, RaceTimeMs = 4000 });
+                // Not to the opponent.
+                Assert.Equal(0, b.Conn.Count<OpponentEvent>());
+
+                var s = LoginAs(h, "Watcher");
+                s.Send(new SpectateRequest { Tag = TagOf(h, s, "Alpha") });
+                OpponentEvent old = s.Last<OpponentEvent>();
+                Assert.True(old.History);
+                Assert.Equal("Buttonb", old.Name);
+                Assert.Equal(a.Match.YourRacer, old.Racer);
+
+                a.Send(new RunEvent { Kind = RunEventKind.ItemUsed, Name = "Syringe" });
+                OpponentEvent now = s.Last<OpponentEvent>();
+                Assert.False(now.History);
+                Assert.Equal(RunEventKind.ItemUsed, now.Kind);
+
+                // Unknown kinds and floods are dropped.
+                a.Send(new RunEvent { Kind = 99, Name = "x" });
+                Assert.Equal("Syringe", s.Last<OpponentEvent>().Name);
+                for (int i = 0; i < 60; i++) a.Send(new RunEvent { Kind = RunEventKind.ItemUsed, Name = "Flare" });
+                Assert.True(s.Conn.Count<OpponentEvent>() < 45);
+            }
+        }
+
+        [Fact]
         public void APlayerInAMatch_CannotWatchAnother_AndWatchersStopWhenTheirOwnStarts()
         {
             using (var h = new Harness())
