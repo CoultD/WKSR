@@ -43,8 +43,8 @@ namespace WKRace.Client
         public string LastModVersion { get; set; }
         // The newest version whose "what is new for your data" notice this player has seen.
         public string NoticeSeen { get; set; }
-        // The player pressed CONNECT in the WKSR window (and not DISCONNECT since): the game signs in to the match
-        // server when it starts. Off until they do: nothing is sent anywhere before that.
+        // The player pressed CONNECT in the WKSR window (and not DISCONNECT since). Nothing is sent anywhere before
+        // that. Cleared at every start (0.9.6): the player chooses again each time.
         public bool Online { get; set; }
         // The player turned off joining the Global chat by itself (OPTIONS, CHAT).
         public bool ChatGlobalOff { get; set; }
@@ -53,7 +53,7 @@ namespace WKRace.Client
         public bool LobbyUnapproved { get; set; }
         // CREATE LOBBY: listed in the lobby browser (else only joinable with its code).
         public bool LobbyPublic { get; set; } = true;
-        // The player chose STEAM LOBBIES (instead of CONNECT) on the WKSR window's first page: kept for the next start.
+        // The player chose STEAM LOBBIES (instead of CONNECT) on the WKSR window's first page. Cleared at every start.
         public bool SteamLobbies { get; set; }
         public bool SoloUnapproved { get; set; }
 

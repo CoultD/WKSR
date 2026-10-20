@@ -11,7 +11,7 @@ namespace WKRace.Client
         // ---- online only when the player wants it ------------------------------------------------------------------
 
         // The game connects to the match server only after CONNECT in the WKSR window, and DISCONNECT takes it
-        // offline again; the choice is kept for the next start. Offline, unranked solo runs still work.
+        // offline again. Every start begins offline. Offline, unranked solo runs still work.
         public bool WantsOnline { get { return _settings.Online; } }
 
         public void GoOnline()

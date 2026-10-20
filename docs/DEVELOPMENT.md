@@ -13,7 +13,7 @@ It has two parts:
 
 ## How a match works
 
-1. Both players press **CONNECT** in WKSR (remembered from then on), then **RANKED > 1V1**.
+1. Both players press **CONNECT** in WKSR (every start begins disconnected), then **RANKED > 1V1**.
 2. When a match is found, the plugin loads the **Campaign** gamemode on the match seed, with **competitive** rules, automatically.
 3. Each world is generated and frozen. When every player's world has loaded, the **ready check** starts: each player presses F9 (or READY in WKSR) within 60 seconds (`--ready-seconds`). When everyone is ready, a 5 second countdown starts and everyone is released at the same moment. Not ready in time: in a ranked match that player forfeits (rated); a friendly 1v1 is called off and both are back in the lobby; a party match starts anyway, with the unready players standing at the bottom.
 4. The match clock is real time since GO. Every new level you enter is a split; the HUD shows the difference to your opponent's time at the same split.
@@ -55,7 +55,7 @@ F8 (rebindable in OPTIONS) opens and closes the chat panel; Enter sends to the s
 
 ## Steam lobbies
 
-**STEAM LOBBIES** (next to CONNECT on the WKSR window's first page; `ClientSettings.SteamLobbies`, kept for the next start; CONNECT and STEAM LOBBIES exclude each other) lets players meet in **Steam lobbies** instead of on the official server. It is part of the same mod: the code lives in `src/WKRace.Mod/Steam/`, and `MainViewModel.SteamMode` switches the shared code at run time (`partial void ...Edition()` hooks in `MainViewModel.cs`, filled in by `Steam/Client/MainViewModel.Steam.cs`, each doing nothing outside Steam mode).
+**STEAM LOBBIES** (next to CONNECT on the WKSR window's first page; `ClientSettings.SteamLobbies`; CONNECT and STEAM LOBBIES exclude each other, and every start begins with neither) lets players meet in **Steam lobbies** instead of on the official server. It is part of the same mod: the code lives in `src/WKRace.Mod/Steam/`, and `MainViewModel.SteamMode` switches the shared code at run time (`partial void ...Edition()` hooks in `MainViewModel.cs`, filled in by `Steam/Client/MainViewModel.Steam.cs`, each doing nothing outside Steam mode).
 
 - **The host runs the server's core.** Opening a lobby starts `LobbyHost`: the official server's `ServerCore` (lobbies, matches, parties, bans, chat; the server files are listed one by one in `WKRace.Mod.csproj`), with in-memory stand-ins for storage and the ranked-only parts (`Steam/Host/HostStandIns.cs`), on a thread of its own. The host's own WKSR talks to it in memory (`LocalLink`); other players through Steam's relay (`SteamNetworkingSockets`, virtual port 47, `SteamPeer`, `SteamHostLink`), so nobody sees anyone's IP address. A player's identity on a host is derived from the Steam account the relay proves, never from what they send.
 - **The Steam lobby** (`SteamMatchmaking`) is how players find the host: its data says `wksr`, a compatibility tag (`wksr_ver` = protocol version + `RaceGuarantees.RulesVersion`, also used as the build tag's mod part, so different mod versions share lobbies while neither changes), the code (the core's lobby id, shown as `WKR-XXXX-XXXX`), the host's Steam id and name, mode, modifiers, player count and whether it is racing. Public lobbies are Steam *public* lobbies and appear in the browser; private ones are Steam *invisible* lobbies, found by their code (Steam's own private type only takes invites). Accepting a Steam invite while the game runs switches to Steam lobbies and joins.

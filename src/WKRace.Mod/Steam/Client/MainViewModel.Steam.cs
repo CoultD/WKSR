@@ -59,7 +59,7 @@ namespace WKRace.Client
         private MatchMode? _takeoverMode;
         private MatchRules _takeoverRules;
 
-        // STEAM LOBBIES chosen (instead of CONNECT) on the first page; kept for the next start.
+        // STEAM LOBBIES chosen (instead of CONNECT) on the first page (every start begins without it).
         public bool SteamMode { get { return _settings.SteamLobbies; } }
 
         // STEAM LOBBIES: off the match server (if connected), into Steam lobbies.
