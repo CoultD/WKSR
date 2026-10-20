@@ -6,7 +6,7 @@ namespace WKRace.Tests
 {
     public class SegmentLobbyTests
     {
-        private static TestClient LoginAs(Harness h, string name, string clientVersion = "0.9.7")
+        private static TestClient LoginAs(Harness h, string name, string clientVersion = "0.9.6")
         {
             var c = new TestClient(h, name);
             ClientHello hello = c.Hello();
@@ -54,13 +54,13 @@ namespace WKRace.Tests
         }
 
         [Fact]
-        public void PlayersBefore097_CannotJoinASegmentLobby()
+        public void PlayersBefore096_CannotJoinASegmentLobby()
         {
             using (var h = new Harness())
             {
                 var a = LoginAs(h, "Alpha");
-                var old = LoginAs(h, "Old", "0.9.6");
-                Assert.False(old.Last<ServerFeatures>().LobbySegments);
+                var old = LoginAs(h, "Old", "0.9.5");
+                Assert.Equal(0, old.Conn.Count<ServerFeatures>());
                 old.Send(new LobbyJoin { LobbyId = Open(a, MatchMode.Party, Segments.Silos) });
                 Assert.Equal(ErrorCode.LobbyBuildMismatch, old.Last<ErrorMessage>().Code);
                 Assert.Single(a.Lobby.Members);
@@ -95,7 +95,7 @@ namespace WKRace.Tests
                 var host = LoginAs(h, "Alpha");
                 Open(host, MatchMode.Party, Segments.Silos);
                 host.Send(new LobbyVisibility { Public = true });
-                var oldHost = LoginAs(h, "Old host", "0.9.6");
+                var oldHost = LoginAs(h, "Old host", "0.9.5");
                 oldHost.Send(new LobbyCreate { Mode = MatchMode.Party, Rules = MatchRules.CuratedSeeds });
                 oldHost.Send(new LobbyVisibility { Public = true });
 
@@ -106,7 +106,7 @@ namespace WKRace.Tests
                 Assert.Equal("Alpha", entry.Host);
                 Assert.Equal(Segments.Silos, entry.Segment);
 
-                var oldLooker = LoginAs(h, "Old looker", "0.9.6");
+                var oldLooker = LoginAs(h, "Old looker", "0.9.5");
                 h.Advance(2000);
                 oldLooker.Send(new LobbyListRequest());
                 LobbyList oldList = oldLooker.Last<LobbyList>();

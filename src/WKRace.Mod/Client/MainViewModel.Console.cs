@@ -59,7 +59,7 @@ namespace WKRace.Client
                     _settings.Save();
                 }
                 _keys = new KeyBindings { Ready = _settings.Keys[0], Forfeit = _settings.Keys[1], Splits = _settings.Keys[2], Ghost = _settings.Keys[3], Chat = _settings.Keys[4] };
-                // From 0.9.7: "-" and "+" after a win (older settings files have five keys and keep the defaults).
+                // From 0.9.6: "-" and "+" after a win (older settings files have five keys and keep the defaults).
                 if (_settings.Keys.Length == 7)
                 {
                     _keys.EndRun = _settings.Keys[5];

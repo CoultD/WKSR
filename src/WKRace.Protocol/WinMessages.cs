@@ -2,7 +2,7 @@ using System;
 
 namespace WKRace.Protocol
 {
-    // Keep running after a win (0.9.7 on). A 1v1 won because the opponent died arrives as a MatchResult with
+    // Keep running after a win (0.9.6 on). A 1v1 won because the opponent died arrives as a MatchResult with
     // KeepRunning set; the last player standing in a party gets LastStanding. Either way the run goes on until the
     // player finishes, dies or ends it with EndRun. A lobby's host decides whether it is allowed (LobbyOptions);
     // ranked always allows it.

@@ -7,7 +7,7 @@ namespace WKRace.Tests
 {
     public class KeepRunningTests
     {
-        private static TestClient LoginAs(Harness h, string name, string clientVersion = "0.9.7")
+        private static TestClient LoginAs(Harness h, string name, string clientVersion = "0.9.6")
         {
             var c = new TestClient(h, name);
             ClientHello hello = c.Hello();
@@ -17,7 +17,7 @@ namespace WKRace.Tests
         }
 
         // A ranked 1v1 (both on the given version), ready and past the countdown.
-        private static void Ranked(Harness h, out TestClient a, out TestClient b, string versionA = "0.9.7")
+        private static void Ranked(Harness h, out TestClient a, out TestClient b, string versionA = "0.9.6")
         {
             a = LoginAs(h, "Alpha", versionA);
             b = LoginAs(h, "Bravo");
@@ -96,7 +96,7 @@ namespace WKRace.Tests
             using (var h = new Harness())
             {
                 TestClient a, b;
-                Ranked(h, out a, out b, versionA: "0.9.6");
+                Ranked(h, out a, out b, versionA: "0.9.5");
                 h.Advance(60000);
                 b.Send(new PlayerDied { Attempt = 1, RaceTimeMs = 60000 });
                 Assert.False(a.Result.KeepRunning);

@@ -8,7 +8,7 @@ namespace WKRace.Protocol
     // lobbies. Older clients and servers keep working with newer ones.
 
     // Server -> client, right after the welcome: what this server can do beyond the protocol's basics. Each later
-    // feature is one more byte at the end, written only for clients that know it (ChatTyping: 0.9.7 on); a reader
+    // feature is one more byte at the end, written only for clients that know it; a reader
     // skips the bytes it does not know, so an older client can read a newer server's list.
     public sealed class ServerFeatures : Message
     {
@@ -25,7 +25,7 @@ namespace WKRace.Protocol
         public override void Write(PacketWriter w)
         {
             w.WriteBool(LobbyBrowser);
-            // The 0.9.7 flags, both or neither (a 0.9.6 client reads only the first byte, and skips the rest).
+            // The flags after the first byte, all or none (a reader skips the ones it does not know).
             if (ChatTyping || LobbySegments || KeepRunning)
             {
                 w.WriteBool(ChatTyping);
@@ -98,7 +98,7 @@ namespace WKRace.Protocol
 
         public readonly List<LobbyListEntry> Entries = new List<LobbyListEntry>();
         public bool Cut;
-        // Each lobby's segment, after the entries (for clients from 0.9.7 on; a 0.9.6 client would not read them).
+        // Each lobby's segment, after the entries (for clients from 0.9.6 on; an older one would not read them).
         public bool WithSegments;
 
         public override MessageType Type { get { return MessageType.LobbyList; } }

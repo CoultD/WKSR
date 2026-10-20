@@ -6,7 +6,7 @@ namespace WKRace.Client
 {
     using Message = WKRace.Protocol.Message;
 
-    // Keep running after a win (0.9.7 on). A 1v1 won by the opponent's death: the result is shown at once, but the
+    // Keep running after a win (0.9.6 on). A 1v1 won by the opponent's death: the result is shown at once, but the
     // run goes on (the game shows a prompt: "+" keeps running, "-" ends the run) until it finishes, dies or ends. The
     // lobby's host can switch it off (LET THE LAST PLAYER FINISH THEIR RUN); ranked always allows it.
     internal sealed partial class MainViewModel

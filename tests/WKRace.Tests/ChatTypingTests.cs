@@ -28,8 +28,8 @@ namespace WKRace.Tests
         {
             using (var h = new Harness())
             {
-                Assert.False(LoginAs(h, "Old", "0.9.6").Last<ServerFeatures>().ChatTyping);
-                Assert.True(LoginAs(h, "New", "0.9.7").Last<ServerFeatures>().ChatTyping);
+                Assert.Equal(0, LoginAs(h, "Old", "0.9.5").Conn.Count<ServerFeatures>());   // older clients hear of no features at all
+                Assert.True(LoginAs(h, "New", "0.9.6").Last<ServerFeatures>().ChatTyping);
             }
         }
 
@@ -38,10 +38,10 @@ namespace WKRace.Tests
         {
             using (var h = new Harness())
             {
-                var a = LoginAs(h, "Alpha", "0.9.7");
-                var b = LoginAs(h, "Bravo", "0.9.7");
-                var old = LoginAs(h, "Charlie", "0.9.6");
-                var outsider = LoginAs(h, "Delta", "0.9.7");
+                var a = LoginAs(h, "Alpha", "0.9.6");
+                var b = LoginAs(h, "Bravo", "0.9.6");
+                var old = LoginAs(h, "Charlie", "0.9.5");
+                var outsider = LoginAs(h, "Delta", "0.9.6");
                 Lobby(a, b, old);
 
                 a.Send(new ChatTyping { Room = ChatRooms.Match, Typing = true });
@@ -63,8 +63,8 @@ namespace WKRace.Tests
         {
             using (var h = new Harness())
             {
-                var a = LoginAs(h, "Alpha", "0.9.7");
-                var b = LoginAs(h, "Bravo", "0.9.7");
+                var a = LoginAs(h, "Alpha", "0.9.6");
+                var b = LoginAs(h, "Bravo", "0.9.6");
                 Lobby(a, b);
                 h.Advance(1000);
                 a.Send(new ChatTyping { Room = ChatRooms.Match, Typing = true });
@@ -83,9 +83,9 @@ namespace WKRace.Tests
         {
             using (var h = new Harness())
             {
-                var a = LoginAs(h, "Alpha", "0.9.7");
-                var b = LoginAs(h, "Bravo", "0.9.7");
-                var c = LoginAs(h, "Charlie", "0.9.7");
+                var a = LoginAs(h, "Alpha", "0.9.6");
+                var b = LoginAs(h, "Bravo", "0.9.6");
+                var c = LoginAs(h, "Charlie", "0.9.6");
                 a.Send(new ChatJoin { Room = ChatRooms.Global, Join = true });
                 b.Send(new ChatJoin { Room = ChatRooms.Global, Join = true });
                 a.Send(new ChatTyping { Room = ChatRooms.Global, Typing = true });

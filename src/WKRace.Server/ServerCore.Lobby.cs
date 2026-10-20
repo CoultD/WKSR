@@ -108,7 +108,7 @@ namespace WKRace.Server
                     ? "That party lobby is full (" + lobby.MaxPlayers + " players)." : "That 1v1 lobby already has two players."));
                 return;
             }
-            // Players from before 0.9.7 cannot play a segment match (in Steam lobbies they can meet newer ones).
+            // Players from before 0.9.6 cannot play a segment match (in Steam lobbies they can meet newer ones).
             if (lobby.Segment != Segments.None && !BuildTag.AtLeast(player.ClientVersion, SegmentsVersion))
             {
                 player.Send(new ErrorMessage(ErrorCode.LobbyBuildMismatch, "That lobby plays a segment, which needs WK Race " + SegmentsVersion + " or newer. Update the mod."));

@@ -4,7 +4,7 @@ using WKRace.Protocol;
 
 namespace WKRace.Server
 {
-    // Keep running after a win (0.9.7 on). A 1v1 decided by a death: the winner gets the result with KeepRunning and
+    // Keep running after a win (0.9.6 on). A 1v1 decided by a death: the winner gets the result with KeepRunning and
     // their run goes on (the match stays listed, Completed, with Survivor set) until they finish (a ranked finish still
     // counts for the 1v1 time board), die, end it (EndRun or a forfeit), leave, or reach the time limit. A party whose
     // other players are all out with nobody finished: the last one gets LastStanding and may run on or end the run;
@@ -12,7 +12,7 @@ namespace WKRace.Server
     // at the death as before, and a party ends as soon as one player is left. Ranked always allows it.
     public sealed partial class ServerCore
     {
-        internal const string KeepRunningVersion = "0.9.7";
+        internal const string KeepRunningVersion = "0.9.6";
 
         private static Slot SurvivorOf(Match match, Player player)
         {

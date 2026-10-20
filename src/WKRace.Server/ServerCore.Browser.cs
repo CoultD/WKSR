@@ -10,9 +10,9 @@ namespace WKRace.Server
     {
         // The first WKSR version that knows the lobby browser's messages, and the first that knows "X is typing...".
         private const string BrowserVersion = "0.9.6";
-        internal const string TypingVersion = "0.9.7";
+        internal const string TypingVersion = "0.9.6";
         // The first that knows segment lobbies.
-        internal const string SegmentsVersion = "0.9.7";
+        internal const string SegmentsVersion = "0.9.6";
         // A player may ask for the list this often.
         private const int LobbyListIntervalMs = 1500;
 

@@ -59,10 +59,10 @@ namespace WKRace.Protocol
         // The host lets in players whose game has mods that are not approved.
         public bool AllowUnapproved;
         public List<LobbyMember> Members = new List<LobbyMember>();
-        // The segment the lobby plays (0: the whole climb). Written last and only when set: only players from 0.9.7
+        // The segment the lobby plays (0: the whole climb). Written last and only when set: only players from 0.9.6
         // on are ever in a segment lobby.
         public byte Segment;
-        // The lobby's options (LobbyOptions). OptionsKnown: the receiving client knows them (0.9.7 on); the server
+        // The lobby's options (LobbyOptions). OptionsKnown: the receiving client knows them (0.9.6 on); the server
         // sets it per player, and only then are they written (after Segment).
         public bool OptionsKnown;
         public bool LetLastFinish = true;
@@ -407,7 +407,7 @@ namespace WKRace.Protocol
     }
 
     // Server -> client: another player in one of the client's rooms is typing (or stopped). Sent only to clients from
-    // 0.9.7 on. A note that is not repeated runs out after a few seconds.
+    // 0.9.6 on. A note that is not repeated runs out after a few seconds.
     public sealed class ChatTypingNote : Message
     {
         public byte Room;

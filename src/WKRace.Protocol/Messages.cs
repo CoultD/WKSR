@@ -506,7 +506,7 @@ namespace WKRace.Protocol
         // Players whose game has mods that are not approved may join (and the host may have them).
         public bool AllowUnapproved;
         // The lobby plays a segment (Segments) instead of the whole climb, 0: the whole climb. Written only when set,
-        // and only sent to a server that knows it (ServerFeatures.LobbySegments, 0.9.7 on).
+        // and only sent to a server that knows it (ServerFeatures.LobbySegments, 0.9.6 on).
         public byte Segment;
 
         public override MessageType Type { get { return MessageType.LobbyCreate; } }
@@ -1000,7 +1000,7 @@ namespace WKRace.Protocol
         public int Place;
         public List<Standing> Standings = new List<Standing>();
         // A 1v1 won because the opponent died: the winner may keep running (their finish still counts for the
-        // leaderboard) or end the run (EndRun). Written last and only when set, so only 0.9.7 on ever gets it.
+        // leaderboard) or end the run (EndRun). Written last and only when set, so only 0.9.6 on ever gets it.
         public bool KeepRunning;
 
         public override MessageType Type { get { return MessageType.MatchResult; } }
