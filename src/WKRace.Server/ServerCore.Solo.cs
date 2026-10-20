@@ -112,6 +112,7 @@ namespace WKRace.Server
             }
             if (result.Outcome == MatchOutcome.Win && result.YourTimeMs >= 0)
             {
+                CountFinishedRun(player, true, run.Segment);
                 _log(player.Record.Name + " finished a ranked solo run" + SegmentNote(run.Segment) + " in " + RaceFormat.Time(result.YourTimeMs) + " (seed " + run.Seed + ")");
                 // A segment run's time goes on its segment's board.
                 SubmitBoardRun(run.Segment != Segments.None ? Segments.Board(run.Segment) : BoardKind.SoloTime, player, result.YourTimeMs, run.Seed, run.Host.Match.Rules, run.Host.Banned, run.GameBuild, run.Recorder, run.Watch);
@@ -169,6 +170,7 @@ namespace WKRace.Server
             }
             IList<string> bans = run.Host.Match.ArtifactBans ? new List<string>(run.Host.Banned) : null;
             player.Solo = null;
+            CountReset(player);
             BeginSolo(player, run.GameBuild, bans, run.Runs, run.Segment);
         }
 
@@ -199,6 +201,7 @@ namespace WKRace.Server
             }
             IList<string> bans = last.Host.Match.ArtifactBans && last.Host.BansDone ? new List<string>(last.Host.Banned) : null;
             player.LastSolo = null;
+            CountReset(player);
             BeginSolo(player, last.GameBuild, bans, last.Runs, last.Segment);
         }
 

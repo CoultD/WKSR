@@ -19,6 +19,8 @@ namespace WKRace.Protocol
         public bool LobbySegments;
         // Keep running after a win, and the lobby option for it (LobbyOptions, EndRun).
         public bool KeepRunning;
+        // The online player list and profiles (OnlineListRequest, ProfileRequest, RunNote).
+        public bool PlayerList;
 
         public override MessageType Type { get { return MessageType.ServerFeatures; } }
 
@@ -26,11 +28,12 @@ namespace WKRace.Protocol
         {
             w.WriteBool(LobbyBrowser);
             // The flags after the first byte, all or none (a reader skips the ones it does not know).
-            if (ChatTyping || LobbySegments || KeepRunning)
+            if (ChatTyping || LobbySegments || KeepRunning || PlayerList)
             {
                 w.WriteBool(ChatTyping);
                 w.WriteBool(LobbySegments);
                 w.WriteBool(KeepRunning);
+                w.WriteBool(PlayerList);
             }
         }
 
@@ -40,6 +43,7 @@ namespace WKRace.Protocol
             if (r.Remaining > 0) m.ChatTyping = r.ReadBool();
             if (r.Remaining > 0) m.LobbySegments = r.ReadBool();
             if (r.Remaining > 0) m.KeepRunning = r.ReadBool();
+            if (r.Remaining > 0) m.PlayerList = r.ReadBool();
             // Features of later versions.
             while (r.Remaining > 0) r.ReadByte();
             return m;

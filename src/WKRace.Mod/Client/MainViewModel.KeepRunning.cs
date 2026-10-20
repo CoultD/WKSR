@@ -14,7 +14,6 @@ namespace WKRace.Client
         // The match whose winner is still running, or empty; the last one standing in a party.
         private Guid _afterWin;
         private bool _lastStanding;
-        private ICommand _letLastFinishCommand;
 
         private void EndAfterWin(Message how)
         {

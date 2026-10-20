@@ -125,6 +125,32 @@ namespace WKRace.Mod
                     Wait(2f);
                     Shot("segment-4-board");
                     break;
+                case "players":
+                    // The players online (the test player hosts a public party lobby): the list, the test player's card,
+                    // their profile, mute and unmute, then JOIN GAME.
+                    Page("players-1-list", WksrWindow.Page.Players, 2.5f);
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: players: " + Vm.PlayersStatus + " "
+                        + string.Join(" | ", System.Linq.Enumerable.Select(Vm.PlayerRows, r => r.Name + " " + r.Activity + (r.LobbyId != 0 ? " (joinable)" : "")))));
+                    Do(() => Vm.SelectPlayer(System.Linq.Enumerable.FirstOrDefault(Vm.PlayerRows, r => !r.You)));
+                    Wait(1f);
+                    Shot("players-2-card");
+                    Do(() => { Vm.ToggleMute(Vm.SelectedPlayer.Name); Plugin.Log.LogInfo("WKSR menu test: muted " + Vm.IsMuted(Vm.SelectedPlayer.Name)); });
+                    Wait(1f);
+                    Shot("players-3-muted");
+                    Do(() => { Vm.ToggleMute(Vm.SelectedPlayer.Name); Plugin.Log.LogInfo("WKSR menu test: muted " + Vm.IsMuted(Vm.SelectedPlayer.Name)); });
+                    Do(() => { Vm.RequestProfile(Vm.SelectedPlayer); MenuUi.Window.Show(WksrWindow.Page.Profile); });
+                    Wait(2f);
+                    Shot("players-4-profile");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: profile " + Vm.ProfileStatus + " "
+                        + string.Join(" | ", System.Linq.Enumerable.Select(Vm.ProfileLines(), l => l.Key + " " + l.Value))));
+                    Do(() => MenuUi.Window.Show(WksrWindow.Page.Players));
+                    Wait(1f);
+                    Do(() => Vm.JoinFromList(Vm.SelectedPlayer));
+                    Until("the lobby joined from the list", 10f, () => Vm.ShowLobbyRoom);
+                    Wait(1.5f);
+                    Shot("players-5-joined");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: joined from the list: " + Vm.LobbyCode));
+                    break;
                 case "search":
                     Do(() => Press(Vm.FindCardCommand, action));
                     MatchAgainstTestPlayer(200f);

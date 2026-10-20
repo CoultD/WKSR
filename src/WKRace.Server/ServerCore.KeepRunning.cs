@@ -32,6 +32,7 @@ namespace WKRace.Server
             slot.Finished = true;
             slot.FinishMs = (int)Math.Min(int.MaxValue, accepted);
             _log("match " + Short(match) + ": " + slot.Name + " finished after the win in " + RaceFormat.Time(slot.FinishMs));
+            if (ImplausibleFinish(slot, accepted) == null) CountFinishedRun(slot.Player, match.Ranked, match.Segment);
             // A ranked 1v1 run counts for the fastest-time board however the match was won.
             if (match.Ranked && ImplausibleFinish(slot, accepted) == null)
                 SubmitBoardRun(BoardKind.DuelTime, slot.Player, slot.FinishMs, match.Seed, match.Rules, match.Banned, slot.Player.GameBuild, slot.Recorder, slot.Watch);

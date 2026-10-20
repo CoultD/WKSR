@@ -210,6 +210,8 @@ namespace WKRace.DevTools
                     {
                         case LobbyCreated created:
                             Console.WriteLine("Party lobby open: " + LobbyCode.Encode(created.LobbyId));
+                            // Listed in the lobby browser (and joinable from the player list).
+                            send(new LobbyVisibility { Public = true });
                             break;
                         case LobbyState lobby:
                             Console.WriteLine("Lobby: " + string.Join(", ", lobby.Members.Select(x => x.Name + (x.Host ? "*" : ""))) + (lobby.Racing ? " (racing)" : ""));

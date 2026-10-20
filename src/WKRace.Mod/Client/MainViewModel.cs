@@ -751,6 +751,7 @@ namespace WKRace.Client
                     _chatTypingKnown = false;
                     _typingSent = false;
                     _lobbySegments = false;
+                    _playerList = false;
                     // The server's name wins: it refuses a taken name and an admin can set one.
                     if (welcome.Name.Length > 0 && welcome.Name != _settings.Name)
                     {
@@ -784,7 +785,9 @@ namespace WKRace.Client
                     break;
 
                 case LobbyCreated created: OnLobbyCreated(created); break;
-                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; _lobbySegments = features.LobbySegments; Raise(nameof(HasLobbySegments)); break;
+                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; _lobbySegments = features.LobbySegments; _playerList = features.PlayerList; Raise(nameof(HasLobbySegments)); break;
+                case OnlineList onlineList: OnOnlineList(onlineList); break;
+                case Profile profile: OnProfile(profile); break;
                 case ChatTypingNote typingNote: OnTypingNote(typingNote); break;
                 case LobbyList lobbyList: OnLobbyList(lobbyList); break;
                 case LobbyState lobby: OnLobbyState(lobby); break;
@@ -983,6 +986,8 @@ namespace WKRace.Client
         {
             // Won by the opponent's death, and the run goes on (KeepRunning): the result counts now, the run is not over.
             bool keepRunning = result.KeepRunning && _matchActive && _practice == null && !_rankedSolo;
+            // An unranked solo run on this PC that was finished: counted for the profile.
+            if (_practice != null && result.Outcome == MatchOutcome.Win && result.YourTimeMs >= 0) NoteRun(RunNote.Finished, _match != null ? _match.Segment : Segments.None);
             _voice.ClearPositions();
             // A ranked solo run reads like a solo run here too (no opponent, no rating change).
             bool rankedSolo = _rankedSolo;
@@ -1424,6 +1429,7 @@ namespace WKRace.Client
             List<string> bans = LastBans();
             MatchRules rules = _match.Rules;
             if (_practice != null) Log(seed != null ? "Unranked run restarted on the same seed." : "Unranked run restarted on a new seed.");
+            NoteRun(RunNote.Restarted, _match.Segment);
             _practice = null;
             _recorder = null;
             _matchActive = false;

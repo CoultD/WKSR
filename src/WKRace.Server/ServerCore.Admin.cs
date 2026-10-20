@@ -205,6 +205,9 @@ namespace WKRace.Server
                     wins = p.Wins,
                     losses = p.Losses,
                     bestTimeMs = p.BestTimeMs,
+                    rankedRunsFinished = p.RankedRuns,
+                    unrankedRunsFinished = p.UnrankedRuns,
+                    restarts = p.Resets,
                     createdUtc = p.CreatedUnixMs > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(p.CreatedUnixMs).UtcDateTime : (DateTime?)null,
                     lastSeenUtc = p.LastSeenUnixMs > 0 ? DateTimeOffset.FromUnixTimeMilliseconds(p.LastSeenUnixMs).UtcDateTime : (DateTime?)null,
                     steamLinked = p.SteamHash != null,
@@ -271,6 +274,9 @@ namespace WKRace.Server
 
             into.Wins += from.Wins;
             into.Losses += from.Losses;
+            into.RankedRuns += from.RankedRuns;
+            into.UnrankedRuns += from.UnrankedRuns;
+            into.Resets += from.Resets;
             if (from.BestTimeMs >= 0 && (into.BestTimeMs < 0 || from.BestTimeMs < into.BestTimeMs)) into.BestTimeMs = from.BestTimeMs;
             string steam = into.SteamHash ?? from.SteamHash;
             _store.Database.ReassignMatches(from.Id, into.Id);

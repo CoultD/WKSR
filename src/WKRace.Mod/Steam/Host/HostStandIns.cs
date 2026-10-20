@@ -161,6 +161,17 @@ namespace WKRace.Server
         {
         }
 
+        // The online player list and profiles are the official server's.
+        private bool PlayerListEnabled { get { return false; } }
+
+        private void HandleOnlineListRequest(Player player, OnlineListRequest request)
+        {
+        }
+
+        private void HandleProfileRequest(Player player, ProfileRequest request)
+        {
+        }
+
         private void HandleReplayRequest(Player player, ReplayRequest request)
         {
         }

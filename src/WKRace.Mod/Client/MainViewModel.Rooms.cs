@@ -135,6 +135,7 @@ namespace WKRace.Client
 
         private void OnTypingNote(ChatTypingNote note)
         {
+            if (note.Typing && IsMuted(note.From)) return;
             Dictionary<string, DateTime> room;
             if (!_typers.TryGetValue(note.Room, out room)) _typers[note.Room] = room = new Dictionary<string, DateTime>();
             if (note.Typing) room[note.From] = DateTime.UtcNow.AddSeconds(TypingShownSeconds);

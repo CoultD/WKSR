@@ -15,7 +15,7 @@ namespace WKRace.Server
     {
         public const string FileName = "wkrace.db";
         public const string SnapshotName = "wkrace-snapshot.db";
-        private const int SchemaVersion = 5;
+        private const int SchemaVersion = 6;
 
         private readonly object _gate = new object();
         private readonly SqliteConnection _db;
@@ -75,6 +75,13 @@ namespace WKRace.Server
                 }
                 if (version < 4) CreateVersion4(tx);
                 if (version < 5) CreateVersion5(tx);
+                if (version < 6)
+                {
+                    // The profile's counts.
+                    Execute("ALTER TABLE players ADD COLUMN ranked_runs INTEGER NOT NULL DEFAULT 0", tx);
+                    Execute("ALTER TABLE players ADD COLUMN unranked_runs INTEGER NOT NULL DEFAULT 0", tx);
+                    Execute("ALTER TABLE players ADD COLUMN resets INTEGER NOT NULL DEFAULT 0", tx);
+                }
                 Execute("PRAGMA user_version=" + SchemaVersion, tx);
                 tx.Commit();
             }
@@ -149,7 +156,7 @@ CREATE INDEX IF NOT EXISTS matches_ended ON matches (ended_ms);", tx);
             {
                 using (SqliteCommand cmd = _db.CreateCommand())
                 {
-                    cmd.CommandText = "SELECT id, name, token_hash, rating, wins, losses, best_time_ms, created_ms, last_seen_ms, steam_hash, banned, ban_reason, name_locked FROM players";
+                    cmd.CommandText = "SELECT id, name, token_hash, rating, wins, losses, best_time_ms, created_ms, last_seen_ms, steam_hash, banned, ban_reason, name_locked, ranked_runs, unranked_runs, resets FROM players";
                     using (SqliteDataReader r = cmd.ExecuteReader())
                     {
                         while (r.Read())
@@ -169,6 +176,9 @@ CREATE INDEX IF NOT EXISTS matches_ended ON matches (ended_ms);", tx);
                                 Banned = r.GetInt64(10) != 0,
                                 BanReason = r.IsDBNull(11) ? null : r.GetString(11),
                                 NameLocked = r.GetInt64(12) != 0,
+                                RankedRuns = r.GetInt32(13),
+                                UnrankedRuns = r.GetInt32(14),
+                                Resets = r.GetInt32(15),
                             });
                         }
                     }
@@ -187,10 +197,12 @@ CREATE INDEX IF NOT EXISTS matches_ended ON matches (ended_ms);", tx);
                 {
                     cmd.Transaction = tx;
                     cmd.CommandText = @"
-INSERT INTO players (id, name, token_hash, rating, wins, losses, best_time_ms, created_ms, last_seen_ms, steam_hash, banned, ban_reason, name_locked)
-VALUES ($id, $name, $token, $rating, $wins, $losses, $best, $created, $seen, $steam, $banned, $reason, $locked)
+INSERT INTO players (id, name, token_hash, rating, wins, losses, best_time_ms, created_ms, last_seen_ms, steam_hash, banned, ban_reason, name_locked,
+    ranked_runs, unranked_runs, resets)
+VALUES ($id, $name, $token, $rating, $wins, $losses, $best, $created, $seen, $steam, $banned, $reason, $locked, $rruns, $uruns, $resets)
 ON CONFLICT (id) DO UPDATE SET name = $name, token_hash = $token, rating = $rating, wins = $wins, losses = $losses,
-    best_time_ms = $best, last_seen_ms = $seen, steam_hash = $steam, banned = $banned, ban_reason = $reason, name_locked = $locked";
+    best_time_ms = $best, last_seen_ms = $seen, steam_hash = $steam, banned = $banned, ban_reason = $reason, name_locked = $locked,
+    ranked_runs = $rruns, unranked_runs = $uruns, resets = $resets";
                     SqliteParameter id = cmd.Parameters.Add("$id", SqliteType.Text);
                     SqliteParameter name = cmd.Parameters.Add("$name", SqliteType.Text);
                     SqliteParameter token = cmd.Parameters.Add("$token", SqliteType.Text);
@@ -204,6 +216,9 @@ ON CONFLICT (id) DO UPDATE SET name = $name, token_hash = $token, rating = $rati
                     SqliteParameter banned = cmd.Parameters.Add("$banned", SqliteType.Integer);
                     SqliteParameter reason = cmd.Parameters.Add("$reason", SqliteType.Text);
                     SqliteParameter locked = cmd.Parameters.Add("$locked", SqliteType.Integer);
+                    SqliteParameter rankedRuns = cmd.Parameters.Add("$rruns", SqliteType.Integer);
+                    SqliteParameter unrankedRuns = cmd.Parameters.Add("$uruns", SqliteType.Integer);
+                    SqliteParameter resets = cmd.Parameters.Add("$resets", SqliteType.Integer);
                     foreach (PlayerRecord p in players)
                     {
                         id.Value = p.Id.ToString();
@@ -219,6 +234,9 @@ ON CONFLICT (id) DO UPDATE SET name = $name, token_hash = $token, rating = $rati
                         banned.Value = p.Banned ? 1 : 0;
                         reason.Value = (object)p.BanReason ?? DBNull.Value;
                         locked.Value = p.NameLocked ? 1 : 0;
+                        rankedRuns.Value = p.RankedRuns;
+                        unrankedRuns.Value = p.UnrankedRuns;
+                        resets.Value = p.Resets;
                         cmd.ExecuteNonQuery();
                     }
                     tx.Commit();

@@ -35,6 +35,8 @@ namespace WKRace.Server
         // Connections that were turned away at the hello: whatever else they send is ignored, not counted against them.
         private readonly HashSet<IConnection> _refused = new HashSet<IConnection>();
         private long _lastFlushMs;
+        // The last online-list tag given to a player.
+        private uint _lastTag;
 
         public ServerCore(ServerOptions options, PlayerStore store, MatchLog matchLog, Func<long> nowMs, Action<string> log)
         {
@@ -123,6 +125,15 @@ namespace WKRace.Server
                     break;
                 case LobbyOptions lobbyOptions:
                     HandleLobbyOptions(player, lobbyOptions);
+                    break;
+                case OnlineListRequest onlineList:
+                    HandleOnlineListRequest(player, onlineList);
+                    break;
+                case ProfileRequest profileRequest:
+                    HandleProfileRequest(player, profileRequest);
+                    break;
+                case RunNote runNote:
+                    HandleRunNote(player, runNote);
                     break;
                 case VoiceState voiceState:
                     HandleVoiceState(player, voiceState);
@@ -405,7 +416,7 @@ namespace WKRace.Server
             Player player;
             if (!_players.TryGetValue(record.Id, out player))
             {
-                player = new Player { Record = record };
+                player = new Player { Record = record, Tag = ++_lastTag };
                 _players[record.Id] = player;
             }
             if (player.Conn != null && player.Conn != conn)

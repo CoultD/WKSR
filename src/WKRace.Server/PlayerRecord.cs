@@ -22,6 +22,10 @@ namespace WKRace.Server
         public string BanReason { get; set; }
         // Set by an admin rename: the server keeps this name whatever the client sends.
         public bool NameLocked { get; set; }
+        // For the profile: runs finished to the end of the climb, ranked and unranked, and restarts in every mode.
+        public int RankedRuns { get; set; }
+        public int UnrankedRuns { get; set; }
+        public int Resets { get; set; }
     }
 
     public static class Elo

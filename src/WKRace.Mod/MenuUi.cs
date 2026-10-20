@@ -197,7 +197,7 @@ namespace WKRace.Mod
 
     internal sealed partial class WksrWindow : WKLibWindow
     {
-        internal enum Page { Main, Ranked, Lobby, Unranked, Boards, Options, Replays, Segments, Browse }
+        internal enum Page { Main, Ranked, Lobby, Unranked, Boards, Options, Replays, Segments, Browse, Players, Profile }
 
         private const float Width = 760f;
         private const float Height = 700f;
@@ -235,6 +235,8 @@ namespace WKRace.Mod
             if (page == Page.Replays && vm != null && vm.ReplaysCardCommand.CanExecute(null)) vm.ReplaysCardCommand.Execute(null);
             // The lobby browser looks for lobbies when it opens.
             if (page == Page.Browse && vm != null && vm.RefreshBrowseCommand.CanExecute(null)) vm.RefreshBrowseCommand.Execute(null);
+            // So does the online player list.
+            if (page == Page.Players && vm != null) vm.RefreshPlayers();
             _keyProblem = null;
         }
 
@@ -286,6 +288,8 @@ namespace WKRace.Mod
             // Offline (neither CONNECT nor STEAM LOBBIES pressed): only what needs no server.
             bool offline = !vm.WantsOnline && !steam;
             if (steam && (_page == Page.Ranked || _page == Page.Boards)) Home();
+            // The player list is the official server's (never in STEAM LOBBIES).
+            if (!vm.HasPlayerList && (_page == Page.Players || _page == Page.Profile)) Home();
             if (offline && _page != Page.Main && _page != Page.Unranked && _page != Page.Replays && _page != Page.Segments) Home();
             if (steam) SteamHeader(gui, vm);
             else Header(gui, vm, offline);
@@ -305,10 +309,12 @@ namespace WKRace.Mod
                     case Page.Replays: Replays(gui, vm); break;
                     case Page.Segments: SegmentRuns(gui, vm, offline); break;
                     case Page.Browse: Browse(gui, vm); break;
+                    case Page.Players: Players(gui, vm); break;
+                    case Page.Profile: PlayerProfile(gui, vm); break;
                     default:
                         if (steam) SteamMain(gui);
                         else if (offline) OfflineMain(gui);
-                        else Main(gui);
+                        else Main(gui, vm);
                         break;
                 }
                 gui.AddSpacing(16f);
@@ -383,7 +389,7 @@ namespace WKRace.Mod
         // The user's own wording: keep it as written.
         private const string OtherModsNote = "Cosmetic mods SHOULD work with this mod just make sure they're updated. This mod might have issues with other mods that tamper with item generating, new items, physics, custom levels and world generating etc.";
 
-        private void Main(ImGui gui)
+        private void Main(ImGui gui, MainViewModel vm)
         {
             Title(gui, "WHITE KNUCKLE SPEEDRUN", "RANKED counts for your rating and the leaderboards. LOBBY is for playing with friends. UNRANKED is solo, with your own rules. SEGMENTS is a solo run of one part of the climb, with a leaderboard per segment.");
             // The layout adds its own spacing between controls on top of the gaps: leave room for it.
@@ -401,10 +407,98 @@ namespace WKRace.Mod
             gui.EndHorizontal();
             gui.AddSpacing(Gap);
             gui.BeginHorizontal();
-            if (gui.Button("LEADERBOARDS", new ImSize(half, 56f))) Go(Page.Boards);
-            gui.AddSpacing(Gap);
-            if (gui.Button("OPTIONS", new ImSize(half, 56f))) Go(Page.Options);
+            if (vm.HasPlayerList)
+            {
+                // LEADERBOARDS, PLAYERS (who is online) and OPTIONS in thirds.
+                float third = (gui.GetLayoutWidth() - 2f * Gap - 12f) / 3f;
+                if (gui.Button("LEADERBOARDS", new ImSize(third, 56f))) Go(Page.Boards);
+                gui.AddSpacing(Gap);
+                if (gui.Button("PLAYERS", new ImSize(third, 56f))) Go(Page.Players);
+                gui.AddSpacing(Gap);
+                if (gui.Button("OPTIONS", new ImSize(third, 56f))) Go(Page.Options);
+            }
+            else
+            {
+                if (gui.Button("LEADERBOARDS", new ImSize(half, 56f))) Go(Page.Boards);
+                gui.AddSpacing(Gap);
+                if (gui.Button("OPTIONS", new ImSize(half, 56f))) Go(Page.Options);
+            }
             gui.EndHorizontal();
+        }
+
+        // ---- players online -------------------------------------------------------------------------------------
+
+        // Who is on the match server and what they are doing. A click on a player opens their card under the list.
+        private void Players(ImGui gui, MainViewModel vm)
+        {
+            vm.KeepPlayersFresh();
+            Title(gui, "PLAYERS ONLINE", "Click a player for their profile, to mute or unmute them, or to join their lobby when it is public.");
+            float width = gui.GetLayoutWidth();
+            float h = gui.GetRowHeight();
+            OnlineRowModel selected = vm.SelectedPlayer;
+            gui.BeginList(new ImSize(width, selected != null ? 230f : 300f));
+            foreach (OnlineRowModel row in vm.PlayerRows)
+            {
+                gui.BeginHorizontal();
+                bool chosen = selected != null && selected.Tag == row.Tag;
+                string name = (chosen ? "> " : "") + row.Name + (row.You ? " (you)" : "") + (vm.IsMuted(row.Name) ? " (muted)" : "");
+                if (gui.Button(name, new ImSize(width * 0.45f, h))) vm.SelectPlayer(row);
+                gui.AddSpacing(8f);
+                gui.Text(row.Activity ?? "", ToColor(row.Brush), gui.AddLayoutRect(width * 0.45f, h));
+                gui.EndHorizontal();
+            }
+            gui.EndList();
+            gui.BeginHorizontal();
+            gui.Text(vm.PlayersStatus ?? "", Dim, gui.AddLayoutRect(width * 0.5f, h));
+            gui.BeginReadOnly(!vm.PlayersHasPrevious);
+            if (gui.Button("UP", new ImSize(80f, 32f))) vm.PlayersPage(-1);
+            gui.EndReadOnly();
+            gui.AddSpacing(8f);
+            gui.BeginReadOnly(!vm.PlayersHasNext);
+            if (gui.Button("DOWN", new ImSize(80f, 32f))) vm.PlayersPage(1);
+            gui.EndReadOnly();
+            gui.AddSpacing(8f);
+            if (gui.Button("REFRESH", new ImSize(120f, 32f))) vm.RefreshPlayers();
+            gui.EndHorizontal();
+
+            selected = vm.SelectedPlayer;
+            if (selected == null) return;
+            gui.AddSpacing(6f);
+            gui.Separator();
+            gui.Text(selected.Name + "   " + selected.Activity, Gold);
+            gui.BeginHorizontal();
+            if (gui.Button("PROFILE", new ImSize(150f, 40f)))
+            {
+                vm.RequestProfile(selected);
+                Go(Page.Profile);
+            }
+            if (!selected.You)
+            {
+                gui.AddSpacing(8f);
+                if (gui.Button(vm.IsMuted(selected.Name) ? "UNMUTE" : "MUTE", new ImSize(150f, 40f))) vm.ToggleMute(selected.Name);
+            }
+            if (vm.CanJoinFromList(selected))
+            {
+                gui.AddSpacing(8f);
+                if (gui.Button("JOIN GAME", new ImSize(170f, 40f))) vm.JoinFromList(selected);
+            }
+            gui.EndHorizontal();
+        }
+
+        private static void PlayerProfile(ImGui gui, MainViewModel vm)
+        {
+            WKRace.Protocol.Profile profile = vm.ShownProfile;
+            Title(gui, profile != null && profile.Found ? profile.Name.ToUpperInvariant() : "PROFILE", vm.ProfileStatus);
+            float h = gui.GetRowHeight();
+            foreach (KeyValuePair<string, string> line in vm.ProfileLines())
+            {
+                gui.BeginHorizontal();
+                gui.Text(line.Key, Dim, gui.AddLayoutRect(240f, h));
+                gui.Text(line.Value ?? "", gui.AddLayoutRect(gui.GetLayoutWidth() - 260f, h));
+                gui.EndHorizontal();
+            }
+            gui.AddSpacing(8f);
+            gui.Text("Runs finished are whole climbs played to the end (a 1v1 won without finishing does not count). Unranked runs are the ones played while connected.", Dim, true);
         }
 
         // ---- leaderboards ---------------------------------------------------------------------------------------

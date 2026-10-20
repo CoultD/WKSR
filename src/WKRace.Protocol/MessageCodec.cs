@@ -97,6 +97,11 @@ namespace WKRace.Protocol
                 case MessageType.EndRun: m = EndRun.Read(r); break;
                 case MessageType.LastStanding: m = LastStanding.Read(r); break;
                 case MessageType.LobbyOptions: m = LobbyOptions.Read(r); break;
+                case MessageType.OnlineListRequest: m = OnlineListRequest.Read(r); break;
+                case MessageType.OnlineList: m = OnlineList.Read(r); break;
+                case MessageType.ProfileRequest: m = ProfileRequest.Read(r); break;
+                case MessageType.Profile: m = Profile.Read(r); break;
+                case MessageType.RunNote: m = RunNote.Read(r); break;
                 case MessageType.VoiceHello: m = VoiceHello.Read(r); break;
                 case MessageType.VoiceState: m = VoiceState.Read(r); break;
                 case MessageType.VoicePeers: m = VoicePeers.Read(r); break;

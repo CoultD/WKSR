@@ -490,6 +490,7 @@ namespace WKRace.Server
 
             slot.Attempt = attempt.Attempt;
             slot.Splits.Clear();
+            CountReset(player);
             if (slot.Recorder != null) slot.Recorder.Add(attempt);
             var relay = new OpponentAttempt { Attempt = attempt.Attempt, RaceTimeMs = attempt.RaceTimeMs, Racer = slot.Racer };
             foreach (Slot other in match.Slots)
@@ -545,6 +546,7 @@ namespace WKRace.Server
             slot.FinishRealMs = (int)Math.Min(int.MaxValue, acceptedReal);
             slot.FinishArrivalMs = now;
             if (slot.FinishMs > slot.GameMs) slot.GameMs = slot.FinishMs;
+            CountFinishedRun(player, match.Ranked, match.Segment);
             // A finished ranked 1v1 run counts for the fastest-time board, whoever wins the match.
             if (match.Ranked && !match.Party)
                 SubmitBoardRun(BoardKind.DuelTime, player, slot.FinishMs, match.Seed, match.Rules, match.Banned, player.GameBuild, slot.Recorder, slot.Watch);

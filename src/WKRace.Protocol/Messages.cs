@@ -83,6 +83,12 @@ namespace WKRace.Protocol
         VoicePeers = 82,
         VoiceActivity = 83,
         LobbyOptions = 84,
+        // The online player list and profiles (PlayerListMessages.cs).
+        OnlineListRequest = 85,
+        OnlineList = 86,
+        ProfileRequest = 87,
+        Profile = 88,
+        RunNote = 89,
 
         BoardRequest = 90,
         BoardPage = 91,

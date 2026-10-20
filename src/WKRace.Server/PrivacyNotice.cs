@@ -21,7 +21,8 @@ namespace WKRace.Server
 
                    "<h2>What is stored</h2><ul>" +
                    "<li><b>Your player:</b> a random player id, your player name, your rating, wins, losses and best time, " +
-                   "when your player was created and when you last connected. From version 0.9.3 your player name is your " +
+                   "when your player was created and when you last connected. From version 0.9.6 also how many runs you finished " +
+                   "(ranked and unranked apart) and how many times you restarted a run, for your profile. From version 0.9.3 your player name is your " +
                    "<b>Steam name</b> (with a number added when another player already has it); your game sends it when it connects.</li>" +
                    "<li><b>Your key:</b> only a one-way hash of the secret key WKSR keeps on your PC. The key itself is never stored here.</li>" +
                    "<li><b>Your Steam account:</b> only a keyed hash of your Steam account number, used to recognise " +
@@ -53,7 +54,9 @@ namespace WKRace.Server
                    "is relayed live, encrypted, to the players in your lobby, or in a match to the players near you; it is never " +
                    "recorded, stored or logged. Lobbies exist in memory only, " +
                    "while they are open. A lobby its host makes public is shown in the lobby browser to every connected " +
-                   "player, with the host's name, the mode and modifiers and how many players are in it. Nothing is sold, shared with " +
+                   "player, with the host's name, the mode and modifiers and how many players are in it. While you are connected, you are " +
+                   "shown in the <b>players online</b> list to every connected player, with what you are doing (searching, in a match, " +
+                   "in a lobby). Nothing is sold, shared with " +
                    "advertisers or used for anything except running the matches.</p>" +
 
                    "<h2>Your IP address</h2>" +
@@ -79,7 +82,9 @@ namespace WKRace.Server
                    "<b>rating</b> with your wins and losses; " +
                    "your <b>fastest times</b> with the version they were played on; and, for the 20 fastest times of a leaderboard, " +
                    "the <b>replay</b>, which other players can download and run against as a ghost. You are only listed once you have " +
-                   "played ranked on version 0.9.1 or later. Lobby matches and unranked runs are never listed. Replays you save " +
+                   "played ranked on version 0.9.1 or later. Lobby matches and unranked runs are never listed. From version 0.9.6 " +
+                   "connected players can open your <b>profile</b> from the players online list: your rating, wins and losses, your " +
+                   "runs finished and restarts, and your places on the leaderboards. Replays you save " +
                    "yourself in WKSR stay on your PC and are never sent here.</p>" +
 
                    "<h2>Why</h2><ul>" +

@@ -13,6 +13,8 @@ namespace WKRace.Server
         internal const string TypingVersion = "0.9.6";
         // The first that knows segment lobbies.
         internal const string SegmentsVersion = "0.9.6";
+        // The first that knows the online player list and profiles.
+        internal const string PlayerListVersion = "0.9.6";
         // A player may ask for the list this often.
         private const int LobbyListIntervalMs = 1500;
 
@@ -25,6 +27,7 @@ namespace WKRace.Server
                 ChatTyping = BuildTag.AtLeast(player.ClientVersion, TypingVersion),
                 LobbySegments = BuildTag.AtLeast(player.ClientVersion, SegmentsVersion),
                 KeepRunning = BuildTag.AtLeast(player.ClientVersion, KeepRunningVersion),
+                PlayerList = PlayerListEnabled && BuildTag.AtLeast(player.ClientVersion, PlayerListVersion),
             });
         }
 

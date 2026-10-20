@@ -58,6 +58,12 @@ namespace WKRace.Server
         public string ClientVersion = "";
         public long LastLobbyListMs = long.MinValue / 2;
         public long LastTypingMs = long.MinValue / 2;
+        // The player's number in the online list, for as long as the server keeps them (ServerCore.Players).
+        public uint Tag;
+        public long LastOnlineListMs = long.MinValue / 2;
+        public long LastProfileMs = long.MinValue / 2;
+        public long LastRunNoteFinishMs = long.MinValue / 2;
+        public long LastRunNoteRestartMs = long.MinValue / 2;
         // Reported by the client: is the game (with the mod) attached to it.
         public bool GameConnected = true;
         // Lobby creates and joins in the last minute.
