@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.7
+
+- Same mod as 0.9.6, with the readme brought up to date (the GitHub link, and what is done from the planned list). Everyone plays on the same version, so update to keep playing with others.
+
 ## 0.9.6
 
 - **Spectating.** On the WKSR server, a player's card in PLAYERS has SPECTATE while they are in a ranked match, a ranked solo run or a public lobby's match. In the lobby browser (WKSR server and Steam lobbies) every public lobby has WATCH, whether it is waiting or in a match, full or not: you see who is in it, watch each of its matches from their start, and JOIN takes a spot as soon as one is free between matches. Your game builds the same world from the seed (with the match's artifact bans) and follows the players in it: third person behind them (the mouse looks around them, the wheel zooms) or first person through their eyes, with their hands. **Left click** follows the next player, **right click** the one before (at most once every 3 seconds), **V** switches the view (OPTIONS can change it). A watched player's game sends its position twice as often, so the view stays smooth. Switching to a player far behind the one you followed loads their part of the world again. Lines on the right say when a player uses an item ("Alex used Syringe"), and buttons, trigger zones and shortcuts they set off are set off in your copy too. It is not 100% accurate (it is built from the positions the players send, about 15 times a second, in your own copy of their world), and the screen says so. STOP SPECTATING in WKSR, or the pause menu's main menu, ends it; when the match ends you go back to the menu. Players see **SPECTATORS n** in the top right corner, and spectators chat with them in the Match room.

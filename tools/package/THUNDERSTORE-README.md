@@ -16,11 +16,12 @@ Join the discord for discussions about features, potential changes, bug reports,
 
 ## Planned
 
-- Feature to allow players to connect to steam relay instead of the dedicated server the game runs currently, it will allow steam invites/lobbies etc but not custom leaderboards due to its limitations.
+- **Done** Feature to allow players to connect to steam relay instead of the dedicated server the game runs currently, it will allow steam invites/lobbies etc but not custom leaderboards due to its limitations.
 - Better livesplit implementation (custom entries, imports, style editing).
 - More gamemodes for bigger lobbies.
 - Customizable models.
-- Open source.
+- **Done** Open source. https://github.com/CoultD/WKSR
+- **Done** Spectator mode.
 
 ## What it do
 
