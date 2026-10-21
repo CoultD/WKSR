@@ -190,6 +190,55 @@ namespace WKRace.Mod
                     Shot("death-3-after");
                     Do(() => Plugin.Log.LogInfo("WKSR menu test: spectating over; dead " + CL_GameManager.isDead()));
                     break;
+                case "spectate-reload":
+                    // A fast and a slow test player: follow the fast one far up, then the slow one, whose levels this
+                    // world has deleted by then: the world is built again where they are.
+                    Page("reload-1-list", WksrWindow.Page.Players, 2f);
+                    Until("a match to watch", 60f, () =>
+                    {
+                        Vm.KeepPlayersFresh();
+                        return System.Linq.Enumerable.Any(Vm.PlayerRows, r => r.Watchable && r.Name == "BotFast");
+                    });
+                    Do(() => Vm.SpectatePlayer(System.Linq.Enumerable.First(Vm.PlayerRows, r => r.Name == "BotFast")));
+                    Until("the spectator's world", 60f, () => RaceController.Current.Spectating != null);
+                    Wait(45f);
+                    Shot("reload-2-fast");
+                    Do(() => { Plugin.Log.LogInfo("WKSR menu test: following " + RaceController.Current.Spectating.WatchedName + " at " + ENT_Player.playerObject.transform.position); RaceController.Current.Spectating.Next(1); });
+                    Wait(2f);
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: now " + (RaceController.Current.Spectating != null ? RaceController.Current.Spectating.WatchedName : "reloading")));
+                    Until("spectating again", 90f, () => RaceController.Current.Spectating != null && RaceController.Current.Spectating.WatchedName == "BotSlow");
+                    Wait(4f);
+                    Shot("reload-3-slow");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: following " + RaceController.Current.Spectating.WatchedName + " at " + ENT_Player.playerObject.transform.position + ", below the world " + RaceController.Current.Spectating.BelowTheWorld()));
+#if DEBUG
+                    // The reload itself (test players never make the game delete levels: they fly through the walls).
+                    Do(() => RaceController.Current.ReloadForTest());
+                    Until("the reload under way", 10f, () => RaceController.Current.Spectating == null);
+                    Until("spectating after the reload", 90f, () => RaceController.Current.Spectating != null);
+                    Wait(4f);
+                    Shot("reload-4-rebuilt");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: after the reload following " + RaceController.Current.Spectating.WatchedName + " at " + ENT_Player.playerObject.transform.position));
+#endif
+                    break;
+                case "watch-lobby":
+                    // The test player hosts a public party lobby: WATCH it from the browser, then JOIN it.
+                    Page("watch-1-browse", WksrWindow.Page.Browse, 3f);
+                    Until("the lobby in the browser", 20f, () =>
+                    {
+                        if (Vm.BrowseRows.Count == 0 && Vm.RefreshBrowseCommand.CanExecute(null)) Vm.RefreshBrowseCommand.Execute(null);
+                        return Vm.BrowseRows.Count > 0;
+                    });
+                    Do(() => Press(System.Linq.Enumerable.First(Vm.BrowseRows).WatchCommand, "watch"));
+                    Until("the lobby watched", 10f, () => Vm.WatchedLobbyState != null);
+                    Wait(1.5f);
+                    Shot("watch-2-spectating");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: " + Vm.WatchingText + " can join " + Vm.CanJoinWatched));
+                    Do(() => Vm.JoinWatched());
+                    Until("the lobby joined", 10f, () => Vm.ShowLobbyRoom);
+                    Wait(1.5f);
+                    Shot("watch-3-joined");
+                    Do(() => Plugin.Log.LogInfo("WKSR menu test: joined the watched lobby; still watching " + Vm.IsWatching));
+                    break;
                 case "players":
                     // The players online (the test player hosts a public party lobby): the list, the test player's card,
                     // their profile, mute and unmute, then JOIN GAME.

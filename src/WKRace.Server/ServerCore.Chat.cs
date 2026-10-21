@@ -53,8 +53,13 @@ namespace WKRace.Server
             }
             else if (player.Lobby != null)
             {
-                to = player.Lobby.Members;
+                to = player.Lobby.Members.Concat(player.Lobby.Spectators);
                 kept = player.Lobby.Chat;
+            }
+            else if (player.WatchingLobby != null)
+            {
+                to = player.WatchingLobby.Members.Concat(player.WatchingLobby.Spectators);
+                kept = player.WatchingLobby.Chat;
             }
             else
             {
@@ -126,7 +131,12 @@ namespace WKRace.Server
             }
             else if (player.Lobby != null)
             {
-                to = player.Lobby.Members;
+                to = player.Lobby.Members.Concat(player.Lobby.Spectators);
+                room = ChatRooms.Match;
+            }
+            else if (player.WatchingLobby != null)
+            {
+                to = player.WatchingLobby.Members.Concat(player.WatchingLobby.Spectators);
                 room = ChatRooms.Match;
             }
             else return;

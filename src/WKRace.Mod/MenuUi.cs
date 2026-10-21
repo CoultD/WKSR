@@ -496,6 +496,16 @@ namespace WKRace.Mod
         private static void Watching(ImGui gui, MainViewModel vm)
         {
             Title(gui, "SPECTATING", vm.WatchingText);
+            WKRace.Protocol.WatchedLobby lobby = vm.WatchedLobbyState;
+            if (lobby != null)
+            {
+                gui.Text("PLAYERS: " + string.Join(", ", lobby.Members), Dim, true);
+                gui.AddSpacing(6f);
+                gui.BeginReadOnly(!vm.CanJoinWatched);
+                if (gui.Button("JOIN", new ImSize(200f, 40f))) vm.JoinWatched();
+                gui.EndReadOnly();
+                gui.AddSpacing(8f);
+            }
             gui.Text("In the game: left click follows the next player, right click the one before. " + RaceConfig.SpectateViewKey.Value
                      + " switches between first and third person; in third person the mouse looks around the player and the wheel zooms.", true);
             gui.AddSpacing(6f);
@@ -626,6 +636,7 @@ namespace WKRace.Mod
             Key(gui, vm, "OPEN / CLOSE CHAT", "Chat");
             Key(gui, vm, "AFTER A WIN: END RUN", "EndRun");
             Key(gui, vm, "AFTER A WIN: KEEP RUNNING", "KeepRunning");
+            Key(gui, vm, "SPECTATING: FIRST / THIRD PERSON", "SpectateView");
             gui.EndVertical();
             if (_keyProblem != null) gui.Text(_keyProblem, Red, true);
 
@@ -871,8 +882,12 @@ namespace WKRace.Mod
             {
                 gui.BeginHorizontal();
                 BrowseLine(gui, row.Host, row.Mode, row.Players, row.State, ToColor(row.Brush), width, false);
-                if (row.WatchCommand != null) Command(gui, "WATCH", row.WatchCommand, new ImSize(90f, gui.GetRowHeight()));
-                else Command(gui, "JOIN", row.JoinCommand, new ImSize(80f, gui.GetRowHeight()));
+                Command(gui, "JOIN", row.JoinCommand, new ImSize(80f, gui.GetRowHeight()));
+                if (row.WatchCommand != null)
+                {
+                    gui.AddSpacing(6f);
+                    Command(gui, "WATCH", row.WatchCommand, new ImSize(90f, gui.GetRowHeight()));
+                }
                 gui.EndHorizontal();
                 gui.Text(row.Rules ?? "", Dim, true);
                 gui.AddSpacing(4f);

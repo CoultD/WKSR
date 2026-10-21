@@ -32,6 +32,12 @@ namespace WKRace.Client
         private const string LobbyKeyRacing = "wksr_racing";
         private const string LobbyKeyPublic = "wksr_public";
         private const string LobbyKeySegment = "wksr_segment";
+        // Each member's part in the Steam lobby (member data): a player, or a spectator watching it.
+        private const string MemberKeyRole = "wksr_role";
+        private const string RolePlayer = "player";
+        private const string RoleWatch = "watch";
+        // Room in a Steam lobby for spectators, beyond its players.
+        private const int SteamSpectatorRoom = 10;
         // How long a lost host is waited for before the lobby is given up.
         private const int HostLostGiveUpSeconds = 60;
         // How long the others wait for a new host after the host left.
@@ -60,6 +66,8 @@ namespace WKRace.Client
         private MatchMode? _takeoverMode;
         private MatchRules _takeoverRules;
         private byte _takeoverSegment;
+        // This Steam lobby was entered to watch it, not to play.
+        private bool _steamWatch;
 
         // STEAM LOBBIES chosen (instead of CONNECT) on the first page (every start begins without it).
         public bool SteamMode { get { return _settings.SteamLobbies; } }
@@ -229,7 +237,7 @@ namespace WKRace.Client
         {
             _creatingSteamLobby = true;
             LobbyHost host = _host;
-            Later(SteamMatchmaking.CreateLobbyAsync(state.MaxPlayers), created =>
+            Later(SteamMatchmaking.CreateLobbyAsync(state.MaxPlayers + SteamSpectatorRoom), created =>
             {
                 _creatingSteamLobby = false;
                 if (_host == null || _host != host)
@@ -253,6 +261,7 @@ namespace WKRace.Client
                 lobby.SetData(LobbyKeyHost, SteamClient.SteamId.Value.ToString(CultureInfo.InvariantCulture));
                 lobby.SetData(LobbyKeyName, _welcomeName ?? _playerName ?? "");
                 lobby.SetData(LobbyKeyPublic, _settings.LobbyPublic ? "1" : "0");
+                lobby.SetMemberData(MemberKeyRole, RolePlayer);
                 // Public lobbies are listed; private ones are joined with the code (Steam's "invisible" type: Steam's
                 // own "private" type can only be joined from an invite).
                 if (_settings.LobbyPublic) lobby.SetPublic();
@@ -274,8 +283,8 @@ namespace WKRace.Client
             lobby.SetData(LobbyKeyMax, state.MaxPlayers.ToString(CultureInfo.InvariantCulture));
             lobby.SetData(LobbyKeyRacing, state.Racing ? "1" : "0");
             lobby.SetData(LobbyKeySegment, state.Segment.ToString(CultureInfo.InvariantCulture));
-            // Nobody can join a lobby that is racing or full; the code works again afterwards.
-            lobby.SetJoinable(!state.Racing && state.Members.Count < state.MaxPlayers);
+            // Steam lets anyone in (spectators watch a full lobby, or one in a match); the host decides who plays.
+            lobby.SetJoinable(true);
         }
 
         // ---- joining ----------------------------------------------------------------------------------------------
@@ -315,8 +324,26 @@ namespace WKRace.Client
             });
         }
 
-        // code: the lobby's code if already known (0: read it from the Steam lobby).
-        private void JoinSteamLobby(Lobby lobby, uint code)
+        // A public Steam lobby from the browser, to watch: its matches, and JOIN when a spot is free.
+        private void WatchSteamLobby(Lobby lobby)
+        {
+            JoinSteamLobby(lobby, 0, true);
+        }
+
+        // Whether the lobby's description (when Steam has it) says it can take another player now; the reason if not.
+        private string PlayProblem(Lobby lobby)
+        {
+            int players, max;
+            bool racing = lobby.GetData(LobbyKeyRacing) == "1";
+            bool counted = int.TryParse(lobby.GetData(LobbyKeyPlayers), NumberStyles.None, CultureInfo.InvariantCulture, out players)
+                           & int.TryParse(lobby.GetData(LobbyKeyMax), NumberStyles.None, CultureInfo.InvariantCulture, out max);
+            if (racing) return "That lobby is in a match right now. WATCH it from the lobby browser, or try again when the match is over.";
+            if (counted && players >= max) return "That lobby is full. WATCH it from the lobby browser to join when a spot frees.";
+            return null;
+        }
+
+        // code: the lobby's code if already known (0: read it from the Steam lobby). watch: enter it as a spectator.
+        private void JoinSteamLobby(Lobby lobby, uint code, bool watch = false)
         {
             if (_phase == ClientPhase.InMatch)
             {
@@ -324,6 +351,12 @@ namespace WKRace.Client
                 return;
             }
             if (_steamLobby.HasValue && _steamLobby.Value.Id == lobby.Id) return;
+            string busy = watch ? null : PlayProblem(lobby);
+            if (busy != null)
+            {
+                LobbyText = busy;
+                return;
+            }
             _steamBusy = true;
             LobbyText = "Joining the lobby...";
             // A Steam invite names the lobby only: its details arrive as it is entered.
@@ -358,13 +391,24 @@ namespace WKRace.Client
                     LobbyText = "That is your own lobby.";
                     return;
                 }
+                // Entered by its code or an invite: its description is known now.
+                string problem = watch ? null : PlayProblem(lobby);
+                if (problem != null)
+                {
+                    lobby.Leave();
+                    LobbyText = problem;
+                    return;
+                }
                 if (_hasLobby) CancelLobby();
                 StopSteamSession(null);
                 _steamLobby = lobby;
                 _hostSteamId = host;
-                _pendingJoin = id;
+                _steamWatch = watch;
+                lobby.SetMemberData(MemberKeyRole, watch ? RoleWatch : RolePlayer);
+                if (watch) _pendingWatch = id;
+                else _pendingJoin = id;
                 ConnectToServer();
-                LobbyText = "Connecting to " + (lobby.GetData(LobbyKeyName) ?? "the host") + "...";
+                LobbyText = (watch ? "Connecting to watch " : "Connecting to ") + (lobby.GetData(LobbyKeyName) ?? "the host") + "...";
                 Raise(nameof(SteamLobbyStatus));
             });
         }
@@ -420,6 +464,7 @@ namespace WKRace.Client
                         State = racing ? "IN A MATCH" : players >= max ? "FULL" : "OPEN",
                         Brush = racing || players >= max ? Theme.Muted : Theme.Good,
                         JoinCommand = new RelayCommand(() => JoinSteamLobby(captured, 0), () => !_steamBusy && _phase != ClientPhase.InMatch && !racing && players < max),
+                        WatchCommand = new RelayCommand(() => WatchSteamLobby(captured), () => !_steamBusy && _phase != ClientPhase.InMatch && !(_steamLobby.HasValue && _steamLobby.Value.Id == captured.Id)),
                     });
                 }
                 BrowseStatus = BrowseRows.Count == 0 ? "No public lobbies right now. Open one with CREATE LOBBY." : BrowseRows.Count + (BrowseRows.Count == 1 ? " lobby" : " lobbies") + ".";
@@ -453,6 +498,7 @@ namespace WKRace.Client
                 _takeoverMode = null;
                 _handoverFrom = 0;
                 _hostLostAt = DateTime.MinValue;
+                _steamWatch = false;
                 if (_steamLobby.HasValue)
                 {
                     try { _steamLobby.Value.Leave(); } catch (Exception) { }
@@ -481,7 +527,11 @@ namespace WKRace.Client
             if (!SteamMode) return;
             Raise(nameof(SteamLobbyStatus));
             if (_leavingSteam || !_steamLobby.HasValue || _host != null || _handoverFrom != 0) return;
-            if (_lobbyId != 0 && !_matchActive) _pendingJoin = _lobbyId;
+            if (_steamWatch)
+            {
+                if (_watchedLobby != null) _pendingWatch = _watchedLobby.LobbyId;
+            }
+            else if (_lobbyId != 0 && !_matchActive) _pendingJoin = _lobbyId;
             LobbyText = "Lost the connection to the lobby's host. Reconnecting...";
             if (_hostLostAt == DateTime.MinValue) _hostLostAt = DateTime.UtcNow;
         }
@@ -527,6 +577,9 @@ namespace WKRace.Client
                     OldRating = _rating, NewRating = _rating, Reason = "The host left. The match has no result.", End = MatchEnd.Other,
                 });
             }
+            if (_watching != null) OnSpectateEnd(new SpectateEnd { MatchId = _watching.MatchId, Reason = "The host left. The match has no result." });
+            _watchedLobby = null;
+            Raise(nameof(IsWatching));
             _handoverFrom = oldHost;
             _handoverUntil = DateTime.UtcNow.AddSeconds(HandoverSeconds);
             _hostLostAt = DateTime.MinValue;
@@ -561,7 +614,8 @@ namespace WKRace.Client
                 {
                     _handoverFrom = 0;
                     _hostSteamId = named;
-                    _pendingJoin = code;
+                    if (_steamWatch) _pendingWatch = code;
+                    else _pendingJoin = code;
                     ConnectToServer();
                     LobbyText = (lobby.GetData(LobbyKeyName) ?? "Another player") + " hosts the lobby now. Connecting...";
                     Raise(nameof(SteamLobbyStatus));
@@ -570,6 +624,14 @@ namespace WKRace.Client
             }
             if (lobby.Owner.Id.Value == me && (named == _handoverFrom || named == 0))
             {
+                // A spectator does not host: the lobby goes on to one of its players, or there is none to watch.
+                if (_steamWatch)
+                {
+                    Friend? player = lobby.Members.Where(m => m.Id.Value != me && lobby.GetMemberData(m, MemberKeyRole) != RoleWatch).Select(m => (Friend?)m).FirstOrDefault();
+                    if (player.HasValue) lobby.Owner = player.Value;
+                    else HostGone("The players left the lobby you watched.");
+                    return;
+                }
                 TakeOverLobby(lobby);
                 return;
             }
@@ -601,6 +663,23 @@ namespace WKRace.Client
             LobbyText = "You host the lobby now.";
             Log("The host left: you host the lobby now.");
             Raise(nameof(SteamLobbyStatus));
+        }
+
+        // JOIN while watching a Steam lobby: already connected to its host, so the join goes straight there.
+        private void JoinWatchedSteamLobby(uint id)
+        {
+            if (_server == null || _link != LinkState.Connected || !_steamLobby.HasValue) return;
+            _steamWatch = false;
+            _steamLobby.Value.SetMemberData(MemberKeyRole, RolePlayer);
+            SendLobbyJoin(id);
+        }
+
+        // Stopped watching (or the watched lobby closed): out of the Steam lobby that was entered for it.
+        private void LeaveWatchedSteamLobby()
+        {
+            if (!_steamWatch) return;
+            _steamWatch = false;
+            if (!_hasLobby) StopSteamSession(null);
         }
 
         private void HostGone(string reason)

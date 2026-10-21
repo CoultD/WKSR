@@ -757,6 +757,8 @@ namespace WKRace.Client
                     _spectateKnown = false;
                     // A new session: the server no longer has a watching from before.
                     if (_watching != null) OnSpectateEnd(new SpectateEnd { MatchId = _watching.MatchId, Reason = "Spectating stopped: the connection to the server was lost." });
+                    if (_watchedLobby != null && !SteamMode) _pendingWatch = _watchedLobby.LobbyId;
+                    _watchedLobby = null;
                     // The server's name wins: it refuses a taken name and an admin can set one.
                     if (welcome.Name.Length > 0 && welcome.Name != _settings.Name)
                     {
@@ -786,6 +788,7 @@ namespace WKRace.Client
                     if (_autoSearch && _phase == ClientPhase.Idle) { _autoSearch = false; ToggleSearch(); }
                     if (_pendingJoin != 0 && _phase != ClientPhase.InMatch) SendLobbyJoin(_pendingJoin);
                     _pendingJoin = 0;
+                    SendPendingWatch();
                     OnWelcomedEdition();
                     break;
 
@@ -794,6 +797,7 @@ namespace WKRace.Client
                 case SpectateStart spectateStart: OnSpectateStart(spectateStart); break;
                 case SpectateEnd spectateEnd: OnSpectateEnd(spectateEnd); break;
                 case SpectatorCount spectators: ToMod(spectators); break;
+                case WatchedLobby watchedLobby: OnWatchedLobby(watchedLobby); break;
                 case OpponentEvent opponentEvent: ToMod(opponentEvent); break;
                 case OnlineList onlineList: OnOnlineList(onlineList); break;
                 case Profile profile: OnProfile(profile); break;
@@ -2277,6 +2281,7 @@ namespace WKRace.Client
         // The lobby room: who is in it, who hosts, the mode and modifiers.
         private void OnLobbyState(LobbyState state)
         {
+            OnJoinedWatchedLobby(state);
             bool joined = !_hasLobby || _lobbyId != state.LobbyId;
             _lobbyId = state.LobbyId;
             _lobbyState = state;

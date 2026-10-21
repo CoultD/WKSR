@@ -77,18 +77,30 @@ namespace WKRace.Mod
             return "following " + _racer + " of [" + string.Join(", ", parts) + "]";
         }
 
-        public void Next(int step)
+        // Switching by hand waits this long after the last switch (each one can mean a world loaded again).
+        public const float SwitchCooldown = 3f;
+        private float _lastSwitch = -SwitchCooldown;
+
+        // Seconds until another switch by hand is allowed (0: now).
+        public float SwitchWait { get { return Mathf.Max(0f, _lastSwitch + SwitchCooldown - Time.unscaledTime); } }
+
+        // Follows the next (step 1) or previous (-1) player. False while the cooldown runs.
+        public bool Next(int step)
         {
+            if (SwitchWait > 0f) return false;
+            _lastSwitch = Time.unscaledTime;
             List<Rival> list = Followable();
-            if (list.Count == 0) return;
+            if (list.Count == 0) return true;
             int at = list.FindIndex(r => r.Racer == _racer);
             int next = at < 0 ? 0 : ((at + step) % list.Count + list.Count) % list.Count;
             Follow(list[next].Racer);
+            return true;
         }
 
         public void Follow(byte racer)
         {
             if (racer == _racer) return;
+            Plugin.Log.LogInfo("Spectating: following racer " + racer + " instead of " + _racer + " (" + Describe() + ")");
             _racer = racer;
             Rival r = Watched;
             if (r != null) _orbitYaw = r.Ghost.Yaw;
@@ -109,6 +121,26 @@ namespace WKRace.Mod
                 if (best == null || c.Splits.Count > best.Splits.Count) best = c;
             if (best != null) Follow(best.Racer);
         }
+
+        // The followed player is below every level this world still has (the game deletes levels well behind the
+        // player it follows, so after following someone far ahead, someone far behind can be in empty space).
+        public bool BelowTheWorld()
+        {
+            Rival r = Watched;
+            WorldLoader loader = WorldLoader.instance;
+            if (r == null || !r.Ghost.HasTarget || loader == null || loader.currentBranch == null) return false;
+            float lowest = float.MaxValue;
+            foreach (WorldLoader.LevelInfo info in loader.currentBranch.levelTracker)
+            {
+                M_Level level = info != null ? info.GetLevel() : null;
+                if (level == null) continue;
+                float bottom = level.transform.position.y + level.GetLocalBounds().min.y;
+                if (bottom < lowest) lowest = bottom;
+            }
+            return lowest != float.MaxValue && r.Ghost.EyeWorld.y < lowest - BelowWorldMargin;
+        }
+
+        private const float BelowWorldMargin = 10f;
 
         // Takes the local player out of play.
         public void Enter()

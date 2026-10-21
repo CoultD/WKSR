@@ -136,6 +136,7 @@ namespace WKRace.Server
 
             RemoveFromQueue(player);
             LeaveLobby(player, null);
+            StopWatchingLobby(player);
             lobby.Members.Add(player);
             lobby.AloneSinceMs = -1;
             player.Lobby = lobby;
@@ -207,6 +208,7 @@ namespace WKRace.Server
             if (lobby.Members.Count == 0)
             {
                 _lobbies.Remove(lobby.Id);
+                CloseWatchedLobby(lobby, "The lobby closed: everyone left.");
                 return;
             }
             SystemChat(lobby.Members, player.Record.Name + " left.");
@@ -232,6 +234,7 @@ namespace WKRace.Server
             }
             lobby.Members.Clear();
             SendVoicePeers(members);
+            CloseWatchedLobby(lobby, reason ?? "The lobby closed.");
         }
 
         // A lobby nobody joined closes after LobbyTimeoutSeconds.
@@ -249,6 +252,7 @@ namespace WKRace.Server
             long now = _now();
             foreach (Player m in lobby.Members) SendLobbyState(lobby, m, now);
             SendVoicePeers(lobby.Members);
+            SendWatchedLobbies(lobby);
         }
 
         private void SendLobbyState(Lobby lobby, Player to, long now)

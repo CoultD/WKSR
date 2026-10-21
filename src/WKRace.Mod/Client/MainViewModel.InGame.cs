@@ -76,6 +76,7 @@ namespace WKRace.Client
                 case "Chat": return _keys.Chat;
                 case "EndRun": return _keys.EndRun;
                 case "KeepRunning": return _keys.KeepRunning;
+                case "SpectateView": return _keys.SpectateView;
                 default: return 0;
             }
         }

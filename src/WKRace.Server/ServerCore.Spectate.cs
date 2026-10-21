@@ -57,7 +57,11 @@ namespace WKRace.Server
             else if (request.LobbyId != 0)
             {
                 Lobby lobby;
-                if (_lobbies.TryGetValue(request.LobbyId, out lobby) && lobby.Public) match = lobby.Match;
+                if (_lobbies.TryGetValue(request.LobbyId, out lobby) && lobby.Public)
+                {
+                    WatchLobby(player, lobby);
+                    return;
+                }
             }
             if (target != null && target.Solo != null && SoloWatchable(target))
             {
@@ -188,6 +192,91 @@ namespace WKRace.Server
         private void HandleSpectateStop(Player player)
         {
             StopWatching(player, null);
+            StopWatchingLobby(player);
+        }
+
+        // ---- watching a lobby ---------------------------------------------------------------------------------
+
+        // A public lobby, whatever its state: its spectators see it, watch its matches from GO, and may join it when a
+        // spot is free between matches.
+        private void WatchLobby(Player player, Lobby lobby)
+        {
+            if (player.Lobby == lobby)
+            {
+                player.Send(new SpectateEnd { Reason = "You are in that lobby." });
+                return;
+            }
+            if (player.WatchingLobby == lobby) return;
+            StopWatching(player, null);
+            StopWatchingLobby(player);
+            if (player.Queue != null)
+            {
+                RemoveFromQueue(player);
+                player.Send(new QueueStatus { Queued = false, PlayersQueued = _queue.Count });
+            }
+            LeaveLobby(player, null);
+            lobby.Spectators.Add(player);
+            player.WatchingLobby = lobby;
+            _log(player.Record.Name + " watches the lobby of " + lobby.Host.Record.Name);
+            SendWatchedLobbies(lobby);
+            WatchLobbyMatch(lobby, player);
+        }
+
+        // The lobby's match, once it can be watched (from GO).
+        private void WatchLobbyMatch(Lobby lobby, Player p)
+        {
+            Match m = lobby.Match;
+            if (m == null || p.Watching != null || !(m.ClockStarted || m.Survivor != null)) return;
+            Watch(p, m.Audience, false);
+        }
+
+        private void StopWatchingLobby(Player player)
+        {
+            Lobby lobby = player.WatchingLobby;
+            if (lobby == null) return;
+            player.WatchingLobby = null;
+            lobby.Spectators.Remove(player);
+            SendWatchedLobbies(lobby);
+        }
+
+        // The lobby as its spectators see it, to each of them.
+        private void SendWatchedLobbies(Lobby lobby)
+        {
+            if (lobby.Spectators.Count == 0) return;
+            var state = new WatchedLobby
+            {
+                LobbyId = lobby.Id,
+                Host = lobby.Host != null ? lobby.Host.Record.Name : "",
+                Mode = lobby.Mode,
+                Rules = lobby.Rules,
+                Segment = lobby.Segment,
+                MaxPlayers = (byte)lobby.MaxPlayers,
+                Racing = lobby.Match != null,
+                Spectators = (ushort)lobby.Spectators.Count,
+            };
+            foreach (Player m in lobby.Members) state.Members.Add(m.Record.Name);
+            foreach (Player p in lobby.Spectators) p.Send(state);
+        }
+
+        // The lobby is gone: its spectators are told, and stop watching it (and its match).
+        private void CloseWatchedLobby(Lobby lobby, string reason)
+        {
+            foreach (Player p in lobby.Spectators.ToList())
+            {
+                p.WatchingLobby = null;
+                p.Send(new WatchedLobby { LobbyId = lobby.Id, Host = lobby.Host != null ? lobby.Host.Record.Name : "", Mode = lobby.Mode, Closed = true, Reason = reason });
+            }
+            lobby.Spectators.Clear();
+        }
+
+        // Spectators of a lobby whose match has reached GO watch it.
+        private void TickLobbyWatchers()
+        {
+            foreach (Lobby lobby in _lobbies.Values)
+            {
+                if (lobby.Spectators.Count == 0 || lobby.Match == null) continue;
+                foreach (Player p in lobby.Spectators.ToList()) WatchLobbyMatch(lobby, p);
+            }
         }
 
         // reason: told to the spectator (null: they asked, or left).

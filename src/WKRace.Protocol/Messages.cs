@@ -108,6 +108,8 @@ namespace WKRace.Protocol
         // What happens in a player's world, for spectators (RunEventMessages.cs).
         RunEvent = 105,
         OpponentEvent = 106,
+        // A lobby being watched (WatchedLobbyMessages.cs).
+        WatchedLobby = 107,
     }
 
     public enum ErrorCode : byte

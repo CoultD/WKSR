@@ -214,6 +214,67 @@ namespace WKRace.Tests
         }
 
         [Fact]
+        public void AFullLobby_CanBeWatched_AndJoinedWhenASpotFrees()
+        {
+            using (var h = new Harness())
+            {
+                var a = LoginAs(h, "Alpha");
+                var b = LoginAs(h, "Bravo");
+                var s = LoginAs(h, "Watcher");
+                a.Send(new LobbyCreate { Mode = MatchMode.Duel, Rules = MatchRules.CuratedSeeds });
+                uint lobby = a.Last<LobbyCreated>().LobbyId;
+                a.Send(new LobbyVisibility { Public = true });
+                b.Send(new LobbyJoin { LobbyId = lobby });          // full, and racing (a 1v1 starts at once)
+
+                s.Send(new SpectateRequest { LobbyId = lobby });
+                WatchedLobby seen = s.Last<WatchedLobby>();
+                Assert.Equal(new[] { "Alpha", "Bravo" }, seen.Members);
+                Assert.True(seen.Racing);
+                Assert.False(seen.CanJoin);
+                Assert.Equal(1, seen.Spectators);
+                // Not yet at GO: no world to watch yet; at GO the spectator is in.
+                Assert.Equal(0, s.Conn.Count<SpectateStart>());
+                a.Ready();
+                b.Ready();
+                h.Advance(h.Options.CountdownMs);
+                Assert.Equal(a.Match.MatchId, s.Last<SpectateStart>().MatchId);
+                // Lobby chat reaches its spectators.
+                a.Send(new ChatSend { Room = ChatRooms.Match, Text = "hi" });
+                Assert.Equal("hi", s.Last<ChatMessage>().Text);
+
+                // The match ends (Bravo forfeits) and Bravo leaves: a spot is free.
+                b.Send(new PlayerForfeit());
+                Assert.NotNull(s.Last<SpectateEnd>());
+                b.Send(new LobbyCancel());
+                Assert.True(s.Last<WatchedLobby>().CanJoin);
+                s.Send(new LobbyJoin { LobbyId = lobby });
+                Assert.Equal(lobby, s.Last<LobbyState>().LobbyId);
+                Assert.Equal(0, a.Last<LobbyState>().Members.Count(m => m.Name == "Bravo"));
+                Assert.Equal(2, a.Last<LobbyState>().Members.Count);
+            }
+        }
+
+        [Fact]
+        public void APrivateLobby_CannotBeWatched_AndAClosedOneSaysSo()
+        {
+            using (var h = new Harness())
+            {
+                var a = LoginAs(h, "Alpha");
+                var s = LoginAs(h, "Watcher");
+                a.Send(new LobbyCreate { Mode = MatchMode.Party, Rules = MatchRules.CuratedSeeds });
+                uint lobby = a.Last<LobbyCreated>().LobbyId;
+                s.Send(new SpectateRequest { LobbyId = lobby });
+                Assert.Equal(0, s.Conn.Count<WatchedLobby>());
+
+                a.Send(new LobbyVisibility { Public = true });
+                s.Send(new SpectateRequest { LobbyId = lobby });
+                Assert.False(s.Last<WatchedLobby>().Closed);
+                a.Send(new LobbyCancel());
+                Assert.True(s.Last<WatchedLobby>().Closed);
+            }
+        }
+
+        [Fact]
         public void WorldEvents_ReachSpectators_AndLateOnesCatchUp()
         {
             using (var h = new Harness())

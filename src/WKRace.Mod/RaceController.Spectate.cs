@@ -29,6 +29,9 @@ namespace WKRace.Mod
         private string _deathType = "";
         // When the player followed went out (to move on after a moment).
         private float _watchedOutAt = -1f;
+        // Since when the player followed has been below this world's levels (a reload after a moment), or -1.
+        private float _belowWorldSince = -1f;
+        private const float ReloadAfterSeconds = 1.5f;
         private int _spectators;
         private Guid _spectatorsFor;
         // The game's own death runs this once (after an own spectating that did not happen).
@@ -72,6 +75,7 @@ namespace WKRace.Mod
                 return;
             }
             s.PendingEvents.Add(e);
+            s.AllEvents.Add(e);
         }
 
         // A few times a second while spectating: what the followed player set off in their world, set off here too
@@ -99,6 +103,14 @@ namespace WKRace.Mod
             }
         }
         internal RacePhase SessionPhase { get { return _session != null ? _session.Phase : RacePhase.Done; } }
+
+#if DEBUG
+        // Testing: the reload a spectator gets when the player followed is below the world.
+        internal void ReloadForTest()
+        {
+            if (_session != null && _session.Spectating && _spectator != null) ReloadWorld(_session, _spectator);
+        }
+#endif
 
         // How many watch this player's match or run (0 when none, or another match's count).
         internal int SpectatorsWatching
@@ -196,6 +208,7 @@ namespace WKRace.Mod
         {
             _ownSpectating = false;
             s.Phase = RacePhase.Spectating;
+            Plugin.Log.LogInfo("Spectating: the world is ready, following racer " + s.WatchStart + ".");
             _spectator = new Spectator(s, s.WatchStart, _firstPerson);
             _spectator.Enter();
             _watchedOutAt = -1f;
@@ -213,18 +226,57 @@ namespace WKRace.Mod
             else if (_watchedOutAt < 0f) _watchedOutAt = Time.unscaledTime;
             else if (Time.unscaledTime - _watchedOutAt >= HoldOnOutSeconds)
             {
+                Plugin.Log.LogInfo("Spectating: " + (watched == null ? "the player followed is not known" : watched.Name + " is out or finished") + "; following the leader.");
                 sp.FollowLeaderIfOut();
                 _watchedOutAt = -1f;
             }
             ReplayEvents();
+            CheckBelowWorld(sp);
             if (MenuUi.IsOpen || GameBridge.GamePaused || ChatInputBlock.Active) return;
-            if (Input.GetMouseButtonDown(0)) sp.Next(1);
-            if (Input.GetMouseButtonDown(1)) sp.Next(-1);
+            int step = Input.GetMouseButtonDown(0) ? 1 : Input.GetMouseButtonDown(1) ? -1 : 0;
+            if (step != 0 && !sp.Next(step)) _hud.Toast("Switching again in " + Mathf.CeilToInt(sp.SwitchWait) + " s.", 1.5f);
             if (Input.GetKeyDown(RaceConfig.SpectateViewKey.Value))
             {
                 sp.ToggleView();
                 _firstPerson = sp.FirstPerson;
             }
+        }
+
+        // Following someone far behind (after someone far ahead): their levels are gone from this world. A match watched
+        // from outside builds its world again from the seed and catches up on the player's events; a player watching
+        // the rest of their own match cannot (it is their match world), and is told.
+        private void CheckBelowWorld(Spectator sp)
+        {
+            RaceSession s = _session;
+            if (s == null || !sp.BelowTheWorld())
+            {
+                _belowWorldSince = -1f;
+                return;
+            }
+            if (_belowWorldSince < 0f)
+            {
+                _belowWorldSince = Time.unscaledTime;
+                if (!s.Spectating) _hud.Toast(sp.WatchedName + " is too far behind to show in your world: follow someone else.", 5f);
+                return;
+            }
+            if (!s.Spectating || s.Phase != RacePhase.Spectating || Time.unscaledTime - _belowWorldSince < ReloadAfterSeconds) return;
+            _belowWorldSince = -1f;
+            Plugin.Log.LogInfo("Spectating: " + sp.WatchedName + " is below this world's levels; building it again.");
+            ReloadWorld(s, sp);
+        }
+
+        // A match watched from outside: its world built again from the seed, following the same player.
+        internal void ReloadWorld(RaceSession s, Spectator sp)
+        {
+            _hud.Toast("Loading the world again where " + sp.WatchedName + " is...", 5f);
+            s.WatchStart = sp.Racer;
+            sp.Exit();
+            _spectator = null;
+            // Everything that happened, again: a new world has none of it.
+            s.PendingEvents.Clear();
+            s.PendingEvents.AddRange(s.AllEvents);
+            s.Phase = RacePhase.Starting;
+            if (!StartRun()) _hud.Toast("Could not find the Campaign gamemode.", Hud.DeltaColor(1), 5f);
         }
 
         // ---- a death that becomes spectating -------------------------------------------------------------------

@@ -67,6 +67,8 @@ namespace WKRace.Server
         // Spectating (ServerCore.Spectate): the audience this player is in, and the one of their own ranked solo runs.
         public Audience Watching;
         public Audience SoloAudience;
+        // The lobby this player watches (from the lobby browser), or null.
+        public Lobby WatchingLobby;
         // RunEvents sent recently (rate limit).
         public readonly Queue<long> EventTimes = new Queue<long>();
         // Reported by the client: is the game (with the mod) attached to it.
@@ -138,6 +140,8 @@ namespace WKRace.Server
         // Since when the host has been on their own (the lobby expires after LobbyTimeoutSeconds of that), or -1.
         public long AloneSinceMs;
         public readonly List<Player> Members = new List<Player>();
+        // Players watching the lobby (ServerCore.Spectate): not in it, but they see it and watch its matches.
+        public readonly List<Player> Spectators = new List<Player>();
         // What was said in the lobby (kept in memory, 24 hours at most): a player who joins later can read back.
         public readonly List<ChatMessage> Chat = new List<ChatMessage>();
         // The lobby's race while one is under way.

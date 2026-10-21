@@ -53,6 +53,8 @@ namespace WKRace.Protocol
         // After a win: "-" ends the run, "+" keeps running (the prompt goes away).
         public int EndRun = 45;        // Minus
         public int KeepRunning = 61;   // Equals ("=" / "+")
+        // Spectating: switch between first and third person.
+        public int SpectateView = 118; // V
 
         // F8. The chat is opened and closed with the same key, so it cannot be a key that types a character.
         public const int DefaultChat = 289;
@@ -72,6 +74,7 @@ namespace WKRace.Protocol
             w.WriteInt32(Chat);
             w.WriteInt32(EndRun);
             w.WriteInt32(KeepRunning);
+            w.WriteInt32(SpectateView);
         }
 
         public static KeyBindings Read(PacketReader r)
@@ -82,13 +85,14 @@ namespace WKRace.Protocol
                 k.EndRun = r.ReadInt32();
                 k.KeepRunning = r.ReadInt32();
             }
+            if (r.Remaining >= 4) k.SpectateView = r.ReadInt32();
             return k;
         }
 
         public bool Same(KeyBindings other)
         {
             return other != null && Ready == other.Ready && Forfeit == other.Forfeit && Splits == other.Splits && Ghost == other.Ghost && Chat == other.Chat
-                && EndRun == other.EndRun && KeepRunning == other.KeepRunning;
+                && EndRun == other.EndRun && KeepRunning == other.KeepRunning && SpectateView == other.SpectateView;
         }
 
         public KeyBindings Clone()

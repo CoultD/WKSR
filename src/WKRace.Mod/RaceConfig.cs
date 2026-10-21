@@ -121,6 +121,7 @@ namespace WKRace.Mod
                 Chat = (int)ChatKey.Value,
                 EndRun = (int)EndRunKey.Value,
                 KeepRunning = (int)KeepRunningKey.Value,
+                SpectateView = (int)SpectateViewKey.Value,
             };
         }
 
@@ -134,6 +135,7 @@ namespace WKRace.Mod
             if (!WKRace.Protocol.KeyBindings.TypesText(keys.Chat)) SetKey(ChatKey, keys.Chat);
             SetKey(EndRunKey, keys.EndRun);
             SetKey(KeepRunningKey, keys.KeepRunning);
+            SetKey(SpectateViewKey, keys.SpectateView);
         }
 
         private static void SetKey(ConfigEntry<KeyCode> entry, int code)

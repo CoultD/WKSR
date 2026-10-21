@@ -50,7 +50,7 @@ namespace WKRace.Client
             RankedSoloCommand = new RelayCommand(StartRankedSolo, () => _link == LinkState.Connected && _phase != ClientPhase.InMatch && !_matchActive);
             OptionsCommand = new RelayCommand(() => OpenOptions?.Invoke());
 
-            if (_settings.Keys != null && (_settings.Keys.Length == 5 || _settings.Keys.Length == 7))
+            if (_settings.Keys != null && _settings.Keys.Length >= 5)
             {
                 // A chat key that types a character (T, the default before 0.9.5) becomes F8.
                 if (KeyBindings.TypesText(_settings.Keys[4]))
@@ -59,12 +59,14 @@ namespace WKRace.Client
                     _settings.Save();
                 }
                 _keys = new KeyBindings { Ready = _settings.Keys[0], Forfeit = _settings.Keys[1], Splits = _settings.Keys[2], Ghost = _settings.Keys[3], Chat = _settings.Keys[4] };
-                // From 0.9.6: "-" and "+" after a win (older settings files have five keys and keep the defaults).
-                if (_settings.Keys.Length == 7)
+                // From 0.9.6: "-" and "+" after a win, and the spectating view (older settings files have fewer keys and
+                // keep the defaults for the rest).
+                if (_settings.Keys.Length >= 7)
                 {
                     _keys.EndRun = _settings.Keys[5];
                     _keys.KeepRunning = _settings.Keys[6];
                 }
+                if (_settings.Keys.Length >= 8) _keys.SpectateView = _settings.Keys[7];
             }
         }
 
@@ -184,9 +186,10 @@ namespace WKRace.Client
                 case "Chat": next.Chat = code; break;
                 case "EndRun": next.EndRun = code; break;
                 case "KeepRunning": next.KeepRunning = code; break;
+                case "SpectateView": next.SpectateView = code; break;
                 default: return "Unknown hotkey.";
             }
-            int[] all = { next.Ready, next.Forfeit, next.Splits, next.Ghost, next.Chat, next.EndRun, next.KeepRunning };
+            int[] all = { next.Ready, next.Forfeit, next.Splits, next.Ghost, next.Chat, next.EndRun, next.KeepRunning, next.SpectateView };
             for (int i = 0; i < all.Length; i++)
                 for (int j = i + 1; j < all.Length; j++)
                     if (all[i] == all[j]) return KeyNames.Name(code) + " is already used by another hotkey.";
@@ -203,7 +206,7 @@ namespace WKRace.Client
         // the game's (a player may have set them in the mod's own config file).
         private void OnModKeys(KeyBindings fromGame)
         {
-            if (_settings.Keys != null && (_settings.Keys.Length == 5 || _settings.Keys.Length == 7))
+            if (_settings.Keys != null && _settings.Keys.Length >= 5)
             {
                 if (!_keys.Same(fromGame)) ToMod(new ModSettings { GhostOpacityPercent = _settings.GhostOpacity, Keys = _keys });
                 return;

@@ -113,6 +113,7 @@ namespace WKRace.Tests
                 new SpectatorCount { MatchId = id, Count = 3 },
                 new RunEvent { Kind = RunEventKind.Button, Name = "Button_Door", X = 1, Y = 200, Z = -3, RaceTimeMs = 90000 },
                 new OpponentEvent { Racer = 2, Kind = RunEventKind.ItemUsed, Name = "Syringe", History = true },
+                new WatchedLobby { LobbyId = 7, Host = "Alpha", Mode = MatchMode.Party, MaxPlayers = 15, Members = { "Alpha", "Bravo" }, Spectators = 2 },
                 new ChatTyping { Room = ChatRooms.Match, Typing = true },
                 new ChatTypingNote { Room = ChatRooms.Match, From = "Alpha", Typing = true },
                 new LobbyList { Entries = { new LobbyListEntry { LobbyId = 7, Host = "Alpha", Mode = MatchMode.Party, Rules = MatchRules.CuratedSeeds, Members = 3, MaxPlayers = 15 } } },

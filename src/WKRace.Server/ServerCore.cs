@@ -214,6 +214,7 @@ namespace WKRace.Server
             player.Conn = null;
             player.PendingMods = null;
             StopWatching(player, null);
+            StopWatchingLobby(player);
             DropVoice(player);
             RemoveFromQueue(player);
             // Someone racing stays in their lobby until the race is over (ReturnToLobby lets them go then).
@@ -242,6 +243,7 @@ namespace WKRace.Server
             TickMatches(now);
             TickSurvivors(now);
             TickSolo(now);
+            TickLobbyWatchers();
             ExpireLobbies(now);
             Matchmake();
 

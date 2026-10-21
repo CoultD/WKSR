@@ -16,6 +16,8 @@ namespace WKRace.Mod
     internal sealed partial class RaceController : MonoBehaviour
     {
         private const float StateInterval = 1f / 15f;
+        // While someone watches: twice as often, so first-person spectating is smooth.
+        private const float WatchedStateInterval = 1f / 30f;
         private const float RetryInterval = 2f;
         private const float ConfirmWindow = 3f;
         private const float ResultSeconds = 25f;
@@ -1036,7 +1038,7 @@ namespace WKRace.Mod
         private void SendState(RaceSession s)
         {
             if (Time.unscaledTime < _nextState || !_link.Connected) return;
-            _nextState = Time.unscaledTime + StateInterval;
+            _nextState = Time.unscaledTime + (SpectatorsWatching > 0 ? WatchedStateInterval : StateInterval);
             if (!GameBridge.TryReadPlayer(_stateMessage)) return;
             _stateMessage.Attempt = s.Attempt;
             _stateMessage.RaceTimeMs = Math.Max(0, s.RaceMs);
