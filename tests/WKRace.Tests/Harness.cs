@@ -87,6 +87,8 @@ namespace WKRace.Tests
         public readonly PlayerStore Store;
         public readonly ServerCore Core;
         public long Now = 1000000000;
+        // Everything the server core logged.
+        public readonly List<string> Logs = new List<string>();
 
         public Harness()
         {
@@ -105,7 +107,7 @@ namespace WKRace.Tests
             };
             Database = new ServerDatabase(_dir, null, null);
             Store = new PlayerStore(Database);
-            Core = new ServerCore(Options, Store, new MatchLog(Database), () => Now, null);
+            Core = new ServerCore(Options, Store, new MatchLog(Database), () => Now, s => { lock (Logs) Logs.Add(s); });
         }
 
         public TestClient Login(string name)

@@ -19,7 +19,7 @@ namespace WKRace.Mod
             MethodBase target = AccessTools.Method(typeof(ENT_Player), "Awake");
             if (target == null)
             {
-                Plugin.Log.LogError("Patch target missing for the character check. The game may have been updated.");
+                HookHealth.Fail("character check", "ENT_Player.Awake not found");
                 return;
             }
             harmony.Patch(target, finalizer: new HarmonyMethod(typeof(PlayerCheck), nameof(AfterAwake)));

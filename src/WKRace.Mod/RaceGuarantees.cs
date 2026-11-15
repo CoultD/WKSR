@@ -12,7 +12,8 @@ namespace WKRace.Mod
     internal static class RaceGuarantees
     {
         // Bump whenever a rule changes: it is part of the world fingerprint, so racers on different rules never race.
-        public const int RulesVersion = 3;
+        // 4: match worlds no longer read the player's save (MatchSave), food rule on the game's new level lists.
+        public const int RulesVersion = 4;
 
         // Which of the rules below the current race uses (its curated-seed modifiers). Seeding the perk consoles that
         // have no seed of their own is not a rule: every race needs it for identical worlds.
@@ -112,7 +113,7 @@ namespace WKRace.Mod
         {
             if (target == null)
             {
-                Plugin.Log.LogError("Patch target missing for " + (prefix ?? postfix) + ". The game may have been updated.");
+                HookHealth.Fail(prefix ?? postfix, "not found in the game");
                 return;
             }
             harmony.Patch(target,
@@ -192,23 +193,31 @@ namespace WKRace.Mod
         // or pill bottle spot: the first such level that was picked moves to the front, so the same levels are climbed
         // and the height stays the same. When none was picked, the first level is exchanged for one that has a spot
         // (of the same height where there is one). No random numbers are drawn, so the rest of the world is unchanged.
-        private static void AfterGenerationLevels(M_Subregion __instance, List<M_Level.LevelAssetHolder> __result)
+        // Since game 0.62a the subregion returns its start, middle and end levels separately and the region builds the
+        // climb from startLevels + midLevels; fullList (used for transitions) is kept in step after the change.
+        private static void AfterGenerationLevels(M_Subregion __instance, M_Subregion.GenerationLevelsOutput __result)
         {
-            if (!RaceRules.InRaceWorld || !On(MatchRules.DeepStorageFood) || __instance == null || __result == null) return;
-            Safe(() => FoodFirst(__instance, __result));
+            if (!RaceRules.InRaceWorld || !On(MatchRules.DeepStorageFood) || __instance == null || __result.midLevels == null) return;
+            Safe(() =>
+            {
+                if (!FoodFirst(__instance, __result.midLevels, 0, __result.midLevels.Count) || __result.fullList == null) return;
+                __result.fullList.Clear();
+                if (__result.startLevels != null) __result.fullList.AddRange(__result.startLevels);
+                __result.fullList.AddRange(__result.midLevels);
+                if (__result.endLevels != null) __result.fullList.AddRange(__result.endLevels);
+            });
         }
 
-        private static void FoodFirst(M_Subregion subregion, List<M_Level.LevelAssetHolder> levels)
+        // Puts a level with a food spot first among levels[start..end). True if the list changed.
+        private static bool FoodFirst(M_Subregion subregion, List<M_Level.LevelAssetHolder> levels, int start, int end)
         {
-            int start = subregion.startLevelReferences != null ? subregion.startLevelReferences.Count : 0;
-            int end = levels.Count - (subregion.endLevelReferences != null ? subregion.endLevelReferences.Count : 0);
-            if (start < 0 || end - start < 1 || end > levels.Count) return;
+            if (start < 0 || end - start < 1 || end > levels.Count) return false;
 
             List<M_Level.LevelAssetHolder> pool = PoolOf(subregion);
-            if (!pool.Exists(h => NameOf(h).StartsWith(DeepStorageLevels, StringComparison.OrdinalIgnoreCase))) return;
+            if (!pool.Exists(h => NameOf(h).StartsWith(DeepStorageLevels, StringComparison.OrdinalIgnoreCase))) return false;
 
             M_Level.LevelAssetHolder first = levels[start];
-            if (HasFoodSpot(first)) return;
+            if (HasFoodSpot(first)) return false;
 
             for (int i = start + 1; i < end; i++)
             {
@@ -217,7 +226,7 @@ namespace WKRace.Mod
                 levels.RemoveAt(i);
                 levels.Insert(start, moved);
                 Plugin.Log.LogInfo("Guarantee: " + NameOf(moved) + " moved to the start of " + subregion.subregionName + " (it has food)");
-                return;
+                return true;
             }
 
             var candidates = new List<M_Level.LevelAssetHolder>();
@@ -227,13 +236,14 @@ namespace WKRace.Mod
                 if (holder.spawnSettings != null && holder.spawnSettings.spawnChance <= 0f) continue;
                 if (HasFoodSpot(holder)) candidates.Add(holder);
             }
-            if (candidates.Count == 0) return;
+            if (candidates.Count == 0) return false;
             List<M_Level.LevelAssetHolder> sameHeight = candidates.FindAll(c => Mathf.Abs(c.length - first.length) < 0.5f);
             if (sameHeight.Count > 0) candidates = sameHeight;
             candidates.Sort((a, b) => string.CompareOrdinal(NameOf(a), NameOf(b)));
             M_Level.LevelAssetHolder chosen = candidates[Pick("firstlevel/" + subregion.subregionName, candidates.Count)];
             levels[start] = chosen;
             Plugin.Log.LogInfo("Guarantee: " + NameOf(chosen) + " replaces " + NameOf(first) + " at the start of " + subregion.subregionName + " (it has food)");
+            return true;
         }
 
         // One line per world for the log: the Deep Storage level the climb really starts with, and whether the rule

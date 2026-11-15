@@ -223,7 +223,7 @@ namespace WKRace.Mod
         {
             if (target == null)
             {
-                Plugin.Log.LogWarning("World events: a hook is missing (" + (prefix ?? postfix) + "); spectators see less of that.");
+                HookHealth.Fail("world events " + (prefix ?? postfix), "not found in the game; spectators see less of that");
                 return;
             }
             try
@@ -234,14 +234,14 @@ namespace WKRace.Mod
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning("World events: could not hook " + target.Name + ": " + e.Message);
+                HookHealth.Fail("world events " + target.Name, e.Message);
             }
         }
 
         private static AccessTools.FieldRef<TObject, TField> Ref<TObject, TField>(string field)
         {
             try { return AccessTools.FieldRefAccess<TObject, TField>(field); }
-            catch (Exception) { return null; }
+            catch (Exception e) { HookHealth.Fail(typeof(TObject).Name + "." + field, e.Message); return null; }
         }
     }
 }

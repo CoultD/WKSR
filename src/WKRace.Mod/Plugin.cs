@@ -11,9 +11,9 @@ namespace WKRace.Mod
         public const string Name = "White Knuckle Race";
 #if DEBUG
         // Test builds outrank a release copy of the same version installed through a mod manager.
-        public const string Version = "0.9.7.9999";
+        public const string Version = "0.9.8.9999";
 #else
-        public const string Version = "0.9.7";
+        public const string Version = "0.9.8";
 #endif
     }
 

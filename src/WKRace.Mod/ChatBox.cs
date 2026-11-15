@@ -172,7 +172,7 @@ namespace WKRace.Mod
         {
             if (target == null)
             {
-                Plugin.Log.LogError("Chat input block: patch target missing for " + (prefix ?? postfix) + ". The game may have been updated.");
+                HookHealth.Fail("chat input block " + (prefix ?? postfix), "not found in the game");
                 return;
             }
             try
@@ -183,7 +183,7 @@ namespace WKRace.Mod
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError("Chat input block: could not patch " + target.Name + ": " + e.Message);
+                HookHealth.Fail("chat input block " + target.Name, e.Message);
             }
         }
 

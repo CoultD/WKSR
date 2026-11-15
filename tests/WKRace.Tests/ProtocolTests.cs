@@ -114,6 +114,8 @@ namespace WKRace.Tests
                 new RunEvent { Kind = RunEventKind.Button, Name = "Button_Door", X = 1, Y = 200, Z = -3, RaceTimeMs = 90000 },
                 new OpponentEvent { Racer = 2, Kind = RunEventKind.ItemUsed, Name = "Syringe", History = true },
                 new WatchedLobby { LobbyId = 7, Host = "Alpha", Mode = MatchMode.Party, MaxPlayers = 15, Members = { "Alpha", "Bravo" }, Spectators = 2 },
+                new WorldLevels { MatchId = id, Total = 2, First = 0, Levels = { new WorldLevel("M1_Intro_01", 1), new WorldLevel("M1_Silos_Storage_05", 2) } },
+                new ClientIssues { Items = { "RaceGuarantees (not found in the game)" } },
                 new ChatTyping { Room = ChatRooms.Match, Typing = true },
                 new ChatTypingNote { Room = ChatRooms.Match, From = "Alpha", Typing = true },
                 new LobbyList { Entries = { new LobbyListEntry { LobbyId = 7, Host = "Alpha", Mode = MatchMode.Party, Rules = MatchRules.CuratedSeeds, Members = 3, MaxPlayers = 15 } } },

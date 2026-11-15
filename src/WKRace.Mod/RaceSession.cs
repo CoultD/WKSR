@@ -195,6 +195,8 @@ namespace WKRace.Mod
         public bool ReadySent;
         public uint WorldHash;
         public int LevelCount;
+        // The world's levels one by one (sent before MatchReady as WorldLevels, for the server's log on a mismatch).
+        public List<WorldLevel> WorldLevels = new List<WorldLevel>();
 
         // The ready check: whether this player has pressed ready (sent, and as the roster confirms), and when it ends.
         public bool ReadyPressed;

@@ -20,7 +20,7 @@ namespace WKRace.Mod
             var target = AccessTools.Method(typeof(ENV_ArtifactDevice), "Start");
             if (target == null)
             {
-                Plugin.Log.LogError("Patch target missing for artifact bans. The game may have been updated.");
+                HookHealth.Fail("artifact bans", "ENV_ArtifactDevice.Start not found");
                 return;
             }
             harmony.Patch(target, prefix: new HarmonyMethod(typeof(ArtifactBans), nameof(BeforeDeviceStart)));

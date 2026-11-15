@@ -232,11 +232,16 @@ namespace WKRace.Mod
 
     // Spawn chances and perk offers that read the player's save (unlocks, campaign wins, XP) read "everything unlocked"
     // during a race, so a new player and a veteran see the same pools. Outside those checks nothing changes.
+    // The same goes for the save flags and lifetime stats that world generation reads since game 0.62a (which sections
+    // are forced in or allowed): inside those checks they read the fixed save in MatchSave, and the seasonal spawn rules
+    // (the PC's clock and date format) are off, so every player builds the same world whatever their progress.
     internal static class RaceUnlocks
     {
         private static int _depth;
         private static int _perkDepth;
         private static int _savedExperience;
+        private static readonly HashSet<string> LoggedFlags = new HashSet<string>(StringComparer.Ordinal);
+        private static AccessTools.FieldRef<CL_GameManager, Dictionary<string, CL_GameManager.SessionFlag>> _sessionFlags;
 
         public static void Apply(Harmony harmony)
         {
@@ -245,13 +250,63 @@ namespace WKRace.Mod
             Wrap(harmony, AccessTools.Method(typeof(Perk), "CanSpawn"), nameof(EnterPerk), nameof(ExitPerk));
             Wrap(harmony, AccessTools.Method(typeof(CL_ProgressionManager), "HasProgressionUnlock"), null, nameof(Unlocked));
             Wrap(harmony, AccessTools.Method(typeof(M_Gamemode), "HasWonGamemode"), null, nameof(Unlocked));
+
+            // World generation (game 0.62a on): sections forced in until visited, sections gated on save flags.
+            Wrap(harmony, AccessTools.Method(typeof(M_Subregion), "ForceSpawn"), nameof(Enter), nameof(Exit));
+            Wrap(harmony, AccessTools.Method(typeof(M_Subregion), "CanSpawn"), nameof(Enter), nameof(Exit));
+            try { _sessionFlags = AccessTools.FieldRefAccess<CL_GameManager, Dictionary<string, CL_GameManager.SessionFlag>>("sessionFlagDict"); }
+            catch (Exception e) { HookHealth.Fail("CL_GameManager.sessionFlagDict", e.Message); }
+            if (_sessionFlags != null) Prefix(harmony, AccessTools.Method(typeof(CL_GameManager), "HasActiveFlag"), nameof(SaveFlag));
+            Prefix(harmony, AccessTools.Method(typeof(StatManager), "GetTotalStatisticInt"), nameof(LifetimeStat));
+            Prefix(harmony, AccessTools.Method(typeof(SSM_DateTimeRange), "Check"), nameof(NoSeasons));
+        }
+
+        private static void Prefix(Harmony harmony, MethodBase target, string prefix)
+        {
+            if (target == null)
+            {
+                HookHealth.Fail(prefix, "not found in the game");
+                return;
+            }
+            harmony.Patch(target, prefix: new HarmonyMethod(typeof(RaceUnlocks), prefix));
+        }
+
+        // Inside a spawn check in a match, a flag this run has not set reads from the fixed match save, not the player's.
+        private static bool SaveFlag(string name, ref bool __result)
+        {
+            if (_depth <= 0 || string.IsNullOrEmpty(name)) return true;
+            CL_GameManager gm = CL_GameManager.gMan;
+            if (gm != null)
+            {
+                Dictionary<string, CL_GameManager.SessionFlag> run = _sessionFlags(gm);
+                if (run != null && run.ContainsKey(name)) return true;
+            }
+            __result = MatchSave.Flag(name);
+            if (!__result && !MatchSave.IsRunFlag(name) && LoggedFlags.Add(name))
+                Plugin.Log.LogInfo("Match world: the save flag " + name + " reads as not set for every player.");
+            return false;
+        }
+
+        private static bool LifetimeStat(ref int __result)
+        {
+            if (_depth <= 0) return true;
+            __result = MatchSave.LifetimeStat;
+            return false;
+        }
+
+        // Seasonal spawn rules compare the PC's local clock with dates parsed in the PC's own format: off in a match.
+        private static bool NoSeasons(SSM_DateTimeRange __instance, ref float __result)
+        {
+            if (!RaceRules.InRaceWorld || __instance == null) return true;
+            __result = __instance.falseValue;
+            return false;
         }
 
         private static void Wrap(Harmony harmony, MethodBase target, string prefix, string postfixOrFinalizer)
         {
             if (target == null)
             {
-                Plugin.Log.LogError("Patch target missing for " + (prefix ?? postfixOrFinalizer) + ". The game may have been updated.");
+                HookHealth.Fail(prefix ?? postfixOrFinalizer, "not found in the game");
                 return;
             }
             bool isFinalizer = prefix != null;

@@ -53,10 +53,13 @@ namespace WKRace.Mod
                 Do(() => Plugin.Log.LogInfo("WKSR menu test: done."));
                 return;
             }
-            if (action == "offline-solo")
+            if (action == "offline-solo" || action.StartsWith("offline-solo:", StringComparison.Ordinal))
             {
-                // Without CONNECT: an unranked solo run, and nothing reaches a server.
+                // Without CONNECT: an unranked solo run, and nothing reaches a server. "offline-solo:<seed>" plays that
+                // seed (to compare the worlds two saves build from it: the "World ready" fingerprint in the log).
+                string seed = action.Length > "offline-solo:".Length ? action.Substring("offline-solo:".Length) : null;
                 Page("menu-0-offline-unranked", WksrWindow.Page.Unranked, 1.5f);
+                if (seed != null) Do(() => Vm.PracticeSeed = seed);
                 Do(() => Press(Vm.PracticeCommand, action));
                 Wait(30f);
                 Shot("offline-run");

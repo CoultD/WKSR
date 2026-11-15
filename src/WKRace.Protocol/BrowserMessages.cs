@@ -23,6 +23,8 @@ namespace WKRace.Protocol
         public bool PlayerList;
         // Spectating (SpectateRequest and the rest).
         public bool Spectate;
+        // World level lists and the parts of WKSR that did not load (WorldLevels, ClientIssues).
+        public bool Diagnostics;
 
         public override MessageType Type { get { return MessageType.ServerFeatures; } }
 
@@ -30,13 +32,15 @@ namespace WKRace.Protocol
         {
             w.WriteBool(LobbyBrowser);
             // The flags after the first byte, all or none (a reader skips the ones it does not know).
-            if (ChatTyping || LobbySegments || KeepRunning || PlayerList || Spectate)
+            if (ChatTyping || LobbySegments || KeepRunning || PlayerList || Spectate || Diagnostics)
             {
                 w.WriteBool(ChatTyping);
                 w.WriteBool(LobbySegments);
                 w.WriteBool(KeepRunning);
                 w.WriteBool(PlayerList);
                 w.WriteBool(Spectate);
+                // Written only when set: clients before 0.9.8 never get the byte (they would skip it anyway).
+                if (Diagnostics) w.WriteBool(Diagnostics);
             }
         }
 
@@ -48,6 +52,7 @@ namespace WKRace.Protocol
             if (r.Remaining > 0) m.KeepRunning = r.ReadBool();
             if (r.Remaining > 0) m.PlayerList = r.ReadBool();
             if (r.Remaining > 0) m.Spectate = r.ReadBool();
+            if (r.Remaining > 0) m.Diagnostics = r.ReadBool();
             // Features of later versions.
             while (r.Remaining > 0) r.ReadByte();
             return m;

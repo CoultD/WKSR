@@ -355,6 +355,7 @@ namespace WKRace.Mod
             {
                 gui.Text("OFFLINE", Dim);
                 if (EmbeddedClient.StartProblem != null) gui.Text(EmbeddedClient.StartProblem, Red, true);
+                if (HookHealth.Count > 0) gui.Text(HookHealth.Summary() + " The game may have been updated: matches can fail until WKSR is updated.", Red, true);
                 gui.Separator();
                 return;
             }
@@ -365,6 +366,7 @@ namespace WKRace.Mod
             if (queued.Length > 0) gui.Text(queued, Dim);
             if (vm.HasUpdate) gui.Text(vm.UpdateText + ". Update the mod in your mod manager.", Gold, true);
             if (EmbeddedClient.StartProblem != null) gui.Text(EmbeddedClient.StartProblem, Red, true);
+            if (HookHealth.Count > 0) gui.Text(HookHealth.Summary() + " The game may have been updated: matches can fail until WKSR is updated.", Red, true);
             gui.Separator();
         }
 

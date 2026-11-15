@@ -14,7 +14,7 @@ namespace WKRace.Mod
             var target = AccessTools.Method(typeof(CL_Button), "Interact", new Type[0]);
             if (target == null)
             {
-                Plugin.Log.LogError("Patch target missing for segment runs. The game may have been updated.");
+                HookHealth.Fail("segment runs", "CL_Button.Interact not found");
                 return;
             }
             harmony.Patch(target, prefix: new HarmonyMethod(typeof(SegmentEnd), nameof(BeforePress)), postfix: new HarmonyMethod(typeof(SegmentEnd), nameof(AfterPress)));

@@ -261,7 +261,7 @@ namespace WKRace.Mod
         private static AccessTools.FieldRef<ENT_Player, float> SafeRef(string name)
         {
             try { return AccessTools.FieldRefAccess<ENT_Player, float>(name); }
-            catch (Exception) { return null; }
+            catch (Exception e) { HookHealth.Fail("ENT_Player." + name, e.Message); return null; }
         }
     }
 }

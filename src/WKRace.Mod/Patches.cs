@@ -23,16 +23,16 @@ namespace WKRace.Mod
 
             Patch(harmony, AccessTools.Method(typeof(Imui.IO.UGUI.ImuiUnityGUIBackend), "OnScroll"), nameof(MenuScrollPrefix), nameof(MenuScrollPostfix));
 
-            Guarded(() => RaceUnlocks.Apply(harmony));
-            Guarded(() => SpawnSeeding.Apply(harmony));
-            Guarded(() => RaceGuarantees.Apply(harmony));
-            Guarded(() => ArtifactBans.Apply(harmony));
-            Guarded(() => SegmentEnd.Apply(harmony));
-            Guarded(() => ChatInputBlock.Apply(harmony));
-            Guarded(() => InventoryLayout.Apply(harmony));
-            Guarded(() => CompetitiveUnlock.Apply(harmony));
-            Guarded(() => PlayerCheck.Apply(harmony));
-            Guarded(() => RunEvents.Apply(harmony));
+            Guarded("RaceUnlocks", () => RaceUnlocks.Apply(harmony));
+            Guarded("SpawnSeeding", () => SpawnSeeding.Apply(harmony));
+            Guarded("RaceGuarantees", () => RaceGuarantees.Apply(harmony));
+            Guarded("ArtifactBans", () => ArtifactBans.Apply(harmony));
+            Guarded("SegmentEnd", () => SegmentEnd.Apply(harmony));
+            Guarded("ChatInputBlock", () => ChatInputBlock.Apply(harmony));
+            Guarded("InventoryLayout", () => InventoryLayout.Apply(harmony));
+            Guarded("CompetitiveUnlock", () => CompetitiveUnlock.Apply(harmony));
+            Guarded("PlayerCheck", () => PlayerCheck.Apply(harmony));
+            Guarded("RunEvents", () => RunEvents.Apply(harmony));
         }
 
         // Imui scrolls half a line of text for a notch of the mouse wheel, which makes the options window and the
@@ -55,7 +55,7 @@ namespace WKRace.Mod
             string name = (prefix ?? postfix);
             if (target == null)
             {
-                Plugin.Log.LogError("Patch target missing for " + name + ". The game may have been updated.");
+                HookHealth.Fail(name, "not found in the game");
                 return;
             }
             try
@@ -67,7 +67,7 @@ namespace WKRace.Mod
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError("Could not patch " + target.DeclaringType.Name + "." + target.Name + ": " + e.Message);
+                HookHealth.Fail(target.DeclaringType.Name + "." + target.Name, e.Message);
             }
         }
 
@@ -179,10 +179,22 @@ namespace WKRace.Mod
             }
         }
 
+        // At run time (inside a hook): an error is logged and the game carries on.
         private static void Guarded(Action action)
         {
             try { action(); }
             catch (Exception e) { Plugin.Log.LogError("Match hook failed: " + e); }
+        }
+
+        // At load time: a group of hooks that did not load is reported (HookHealth).
+        private static void Guarded(string name, Action action)
+        {
+            try { action(); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError("Match hook failed: " + e);
+                HookHealth.Fail(name, e.InnerException != null ? e.InnerException.Message : e.Message);
+            }
         }
     }
 }

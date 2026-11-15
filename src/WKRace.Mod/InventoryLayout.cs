@@ -29,7 +29,7 @@ namespace WKRace.Mod
             var target = AccessTools.Method(typeof(M_Gamemode), "StartFreshGamemode");
             if (target == null)
             {
-                Plugin.Log.LogError("Patch target missing for the inventory layout. The game may have been updated.");
+                HookHealth.Fail("inventory layout", "M_Gamemode.StartFreshGamemode not found");
                 return;
             }
             harmony.Patch(target, postfix: new HarmonyMethod(typeof(InventoryLayout), nameof(AfterStartFresh)));

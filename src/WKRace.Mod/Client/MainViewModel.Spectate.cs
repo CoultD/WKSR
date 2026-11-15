@@ -12,6 +12,8 @@ namespace WKRace.Client
     {
         // The match server can do it (ServerFeatures).
         private bool _spectateKnown;
+        // The server takes the world's level list and the parts of WKSR that did not load (ServerFeatures.Diagnostics).
+        private bool _diagnostics;
         // What is being watched from outside (not the player's own match), or null.
         private SpectateStart _watching;
         private string _watchingName = "";

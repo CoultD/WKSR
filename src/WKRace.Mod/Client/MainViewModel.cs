@@ -755,6 +755,7 @@ namespace WKRace.Client
                     _lobbySegments = false;
                     _playerList = false;
                     _spectateKnown = false;
+                    _diagnostics = false;
                     // A new session: the server no longer has a watching from before.
                     if (_watching != null) OnSpectateEnd(new SpectateEnd { MatchId = _watching.MatchId, Reason = "Spectating stopped: the connection to the server was lost." });
                     if (_watchedLobby != null && !SteamMode) _pendingWatch = _watchedLobby.LobbyId;
@@ -793,7 +794,7 @@ namespace WKRace.Client
                     break;
 
                 case LobbyCreated created: OnLobbyCreated(created); break;
-                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; _lobbySegments = features.LobbySegments; _playerList = features.PlayerList; _spectateKnown = features.Spectate; Raise(nameof(HasLobbySegments)); break;
+                case ServerFeatures features: OnServerFeatures(features); _chatTypingKnown = features.ChatTyping; _lobbySegments = features.LobbySegments; _playerList = features.PlayerList; _spectateKnown = features.Spectate; Raise(nameof(HasLobbySegments)); OnDiagnostics(features.Diagnostics); break;
                 case SpectateStart spectateStart: OnSpectateStart(spectateStart); break;
                 case SpectateEnd spectateEnd: OnSpectateEnd(spectateEnd); break;
                 case SpectatorCount spectators: ToMod(spectators); break;
@@ -1257,6 +1258,14 @@ namespace WKRace.Client
         }
 
         // What the game reports goes to the race server, or to the practice host during a practice run.
+        // The server takes diagnostics: it is told once which parts of WKSR did not load in this game, if any.
+        private void OnDiagnostics(bool known)
+        {
+            _diagnostics = known;
+            if (!known || WKRace.Mod.HookHealth.Count == 0) return;
+            _server?.Send(new ClientIssues { Items = WKRace.Mod.HookHealth.Failures.ToList() });
+        }
+
         private void ToHost(Message message)
         {
             if (_practice != null) _practice.OnMessage(message);
@@ -1306,6 +1315,11 @@ namespace WKRace.Client
 
                 case LoadedMods mods:
                     OnGameMods(mods);
+                    break;
+
+                case WorldLevels levels:
+                    // Only for the server's log on a world mismatch: not for practice runs, and only to a server that asked.
+                    if (_matchActive && _practice == null && _diagnostics) _server?.Send(levels);
                     break;
 
                 case MatchReady ready:

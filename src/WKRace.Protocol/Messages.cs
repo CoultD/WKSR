@@ -110,6 +110,9 @@ namespace WKRace.Protocol
         OpponentEvent = 106,
         // A lobby being watched (WatchedLobbyMessages.cs).
         WatchedLobby = 107,
+        // Diagnostics for game updates (DiagnosticsMessages.cs).
+        WorldLevels = 108,
+        ClientIssues = 109,
     }
 
     public enum ErrorCode : byte

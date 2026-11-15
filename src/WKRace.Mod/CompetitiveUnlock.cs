@@ -21,7 +21,7 @@ namespace WKRace.Mod
             var target = AccessTools.Method(typeof(ProgressionUnlock), "CheckUnlock");
             if (target == null)
             {
-                Plugin.Log.LogError("Patch target missing for the competitive unlock. The game may have been updated.");
+                HookHealth.Fail("competitive unlock", "ProgressionUnlock.CheckUnlock not found");
                 return;
             }
             harmony.Patch(target, postfix: new HarmonyMethod(typeof(CompetitiveUnlock), nameof(AfterCheckUnlock)));

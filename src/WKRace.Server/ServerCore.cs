@@ -105,6 +105,12 @@ namespace WKRace.Server
                 case MatchReady ready:
                     HandleLoaded(player, ready);
                     break;
+                case WorldLevels worldLevels:
+                    HandleWorldLevels(player, worldLevels);
+                    break;
+                case ClientIssues clientIssues:
+                    HandleClientIssues(player, clientIssues);
+                    break;
                 case PlayerReady playerReady:
                     HandlePlayerReady(player, playerReady);
                     break;

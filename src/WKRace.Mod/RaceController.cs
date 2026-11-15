@@ -755,9 +755,13 @@ namespace WKRace.Mod
                 return;
             }
             int levels;
-            s.WorldHash = GameBridge.WorldFingerprint(out levels);
+            List<WorldLevel> levelList;
+            s.WorldHash = GameBridge.WorldFingerprint(out levels, out levelList);
             s.LevelCount = levels;
+            s.WorldLevels = levelList;
             Plugin.Log.LogInfo("World ready: " + levels + " levels, fingerprint " + s.WorldHash.ToString("X8"));
+            // The whole climb on one line, so two players' logs can be compared level by level.
+            Plugin.Log.LogInfo("World levels: " + string.Join(", ", levelList.ConvertAll(l => l.ToString()).ToArray()));
             RaceGuarantees.LogFirstLevel();
 #if DEBUG
             ReconDump.WorldReady();
@@ -1009,6 +1013,9 @@ namespace WKRace.Mod
         private void SendReady(RaceSession s)
         {
             s.ReadySent = true;
+            // The level list goes first, so the server has it when it compares the worlds (WKSR passes it on only to a
+            // server that asked for it).
+            foreach (WorldLevels part in WorldLevels.Split(s.MatchId, s.WorldLevels)) _link.Send(part);
             _link.Send(new MatchReady { MatchId = s.MatchId, WorldHash = s.WorldHash, LevelCount = s.LevelCount });
         }
 

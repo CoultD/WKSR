@@ -110,6 +110,8 @@ namespace WKRace.Protocol
                 case MessageType.RunEvent: m = RunEvent.Read(r); break;
                 case MessageType.OpponentEvent: m = OpponentEvent.Read(r); break;
                 case MessageType.WatchedLobby: m = WatchedLobby.Read(r); break;
+                case MessageType.WorldLevels: m = WorldLevels.Read(r); break;
+                case MessageType.ClientIssues: m = ClientIssues.Read(r); break;
                 case MessageType.VoiceHello: m = VoiceHello.Read(r); break;
                 case MessageType.VoiceState: m = VoiceState.Read(r); break;
                 case MessageType.VoicePeers: m = VoicePeers.Read(r); break;

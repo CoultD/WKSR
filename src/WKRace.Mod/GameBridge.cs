@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using HarmonyLib;
 using UnityEngine;
@@ -109,7 +110,7 @@ namespace WKRace.Mod
         private static AccessTools.FieldRef<CL_GameManager, float> SafeFloatRef(string name)
         {
             try { return AccessTools.FieldRefAccess<CL_GameManager, float>(name); }
-            catch (Exception) { return null; }
+            catch (Exception e) { HookHealth.Fail("CL_GameManager." + name, e.Message); return null; }
         }
 
         public static M_Gamemode FindCampaign()
@@ -193,7 +194,16 @@ namespace WKRace.Mod
 
         public static uint WorldFingerprint(out int levelCount)
         {
+            List<WorldLevel> levels;
+            return WorldFingerprint(out levelCount, out levels);
+        }
+
+        // levels: the same levels one by one, in climb order (name, and a hash of the rest the fingerprint covers), so
+        // the server can log where two worlds split (WorldLevels).
+        public static uint WorldFingerprint(out int levelCount, out List<WorldLevel> levels)
+        {
             levelCount = 0;
+            levels = new List<WorldLevel>();
             WorldLoader loader = WorldLoader.instance;
             if (loader == null) return 0;
             WorldLoader.BranchInfo branch = loader.GetCurrentBranch();
@@ -210,11 +220,16 @@ namespace WKRace.Mod
                 if (level == null) continue;
                 M_Level.LevelAssetHolder holder = info.GetLevelAssetReference();
                 Vector3 p = ToShared(level.transform.position);
-                hash = Fnv1a.Add(hash, holder != null ? holder.id : level.levelName);
-                hash = Fnv1a.Add(hash, Mathf.RoundToInt(p.x * 10f));
-                hash = Fnv1a.Add(hash, Mathf.RoundToInt(p.y * 10f));
-                hash = Fnv1a.Add(hash, Mathf.RoundToInt(p.z * 10f));
-                hash = Fnv1a.Add(hash, level.transform.localScale.x < 0f ? 1 : 0);
+                string name = holder != null ? holder.id : level.levelName;
+                int x = Mathf.RoundToInt(p.x * 10f), y = Mathf.RoundToInt(p.y * 10f), z = Mathf.RoundToInt(p.z * 10f);
+                int mirrored = level.transform.localScale.x < 0f ? 1 : 0;
+                hash = Fnv1a.Add(hash, name);
+                hash = Fnv1a.Add(hash, x);
+                hash = Fnv1a.Add(hash, y);
+                hash = Fnv1a.Add(hash, z);
+                hash = Fnv1a.Add(hash, mirrored);
+                uint place = Fnv1a.Add(Fnv1a.Add(Fnv1a.Add(Fnv1a.Add(Fnv1a.Offset, x), y), z), mirrored);
+                levels.Add(new WorldLevel(level.levelName, place));
                 levelCount++;
             }
             return hash == 0 ? 1u : hash;
@@ -289,7 +304,7 @@ namespace WKRace.Mod
         private static AccessTools.FieldRef<ENT_Player, Vector3> SafeFieldRef(string name)
         {
             try { return AccessTools.FieldRefAccess<ENT_Player, Vector3>(name); }
-            catch (Exception) { return null; }
+            catch (Exception e) { HookHealth.Fail("ENT_Player." + name, e.Message); return null; }
         }
 
         public static void ClearFreezeFlags()

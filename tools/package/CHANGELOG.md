@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.8
+
+Everyone needs 0.9.8: it can't play with 0.9.7.
+
+- **Fixed "Your worlds did not match" between players with different progress.** Since White Knuckle's Halloween update, which sections the game builds depends on each player's own save: a section you have never visited (such as the new Arterial Bypass in the Pipeworks) is forced into your climb, and some sections need progress such as reaching the Nest. Two players with different progress then got different worlds from the same seed, and the match was cancelled. In a match the game now builds the world as if every player had visited every section and earned every unlock: no section is forced in, each one appears at its normal chance, and your progress makes no difference. Seasonal events are left out of match worlds too. Your save itself is not changed.
+- **The first Deep Storage level has food again** in ranked and with the standard modifiers. The rule had stopped working with the Halloween update.
+- **WKSR now says when part of it did not load.** If a White Knuckle update breaks one of the places where WKSR hooks into the game, a red line at the top of the WKSR window says so (matches can fail until WKSR is updated), and the WKSR server is told, so a fix can come quickly.
+- **Better reports when worlds do not match.** Your game now writes the levels of every match world to its log, and on the WKSR server sends them along, so the server can see exactly where two worlds differ.
+
 ## 0.9.7
 
 - Same mod as 0.9.6, with the readme brought up to date (the GitHub link, and what is done from the planned list). Everyone plays on the same version, so update to keep playing with others.

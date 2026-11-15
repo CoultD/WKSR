@@ -322,6 +322,7 @@ namespace WKRace.Server
                 if (match.A.WorldHash != 0 && match.B.WorldHash != 0 && match.A.WorldHash != match.B.WorldHash)
                 {
                     _log("match " + Short(match) + ": world hash mismatch " + match.A.WorldHash.ToString("X8") + " vs " + match.B.WorldHash.ToString("X8"));
+                    LogWorldSplit(match, match.A, match.B);
                     NoteWorlds(match.A.Player.GameBuild, match.B.Player.GameBuild, false);
                     Complete(match, null, true, "Your worlds did not match (different game versions or mods?). No rating change.");
                     return;
@@ -340,6 +341,7 @@ namespace WKRace.Server
                     {
                         NoteWorlds(odd.Player.GameBuild, usual.Player.GameBuild, false);
                         _log("match " + Short(match) + ": " + odd.Name + " has a different world " + odd.WorldHash.ToString("X8") + " (match " + world.ToString("X8") + ")");
+                        LogWorldSplit(match, usual, odd);
                         odd.Player.Send(new ErrorMessage(ErrorCode.Unknown, "Your world is different from the others' (a different game version or mods?), so you cannot play in this match."));
                         MarkLeft(match, odd, 0, " could not play: their world was different.");
                     }

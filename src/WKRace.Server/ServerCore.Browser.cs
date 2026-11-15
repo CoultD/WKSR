@@ -29,6 +29,7 @@ namespace WKRace.Server
                 KeepRunning = BuildTag.AtLeast(player.ClientVersion, KeepRunningVersion),
                 PlayerList = PlayerListEnabled && BuildTag.AtLeast(player.ClientVersion, PlayerListVersion),
                 Spectate = BuildTag.AtLeast(player.ClientVersion, SpectateVersion),
+                Diagnostics = BuildTag.AtLeast(player.ClientVersion, DiagnosticsVersion),
             });
         }
 

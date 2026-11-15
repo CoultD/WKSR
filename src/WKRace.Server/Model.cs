@@ -45,6 +45,8 @@ namespace WKRace.Server
         // (ServerCore.Mods). ModsCut: the game has more than a list holds.
         public Dictionary<string, ModEntry> Mods = new Dictionary<string, ModEntry>(StringComparer.Ordinal);
         public bool ModsCut;
+        // The parts of WKSR that did not load in this player's game have been logged (ClientIssues, once).
+        public bool IssuesLogged;
         // A list that is still arriving, part by part.
         public List<ModEntry> PendingMods;
         public int PendingModParts;
@@ -160,6 +162,9 @@ namespace WKRace.Server
         public bool Loaded;
         public bool Ready;
         public uint WorldHash;
+        // The levels of the player's world in climb order (WorldLevels, 0.9.8 on): null until the first part arrives,
+        // a null entry for a part still missing. Used only to log where two worlds split.
+        public WorldLevel?[] Levels;
         public int Attempt = 1;
         public bool Finished;
         // The racer's time: the game's own run timer when they finished (what is shown, ranked in a party and kept).
