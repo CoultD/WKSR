@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.9
+
+For White Knuckle's The Core update (Beta 0.70).
+
+- **Fixed the perk terminal showing no perks.** The Core update changed how perk terminals are seeded, and WKSR's old seeding stopped the page from dealing its cards, in matches and outside them. The game now seeds every terminal the same way for every player, so WKSR leaves that to the game.
+- **Artifact bans work again.** The update changed how artifact rooms list their artifacts (each now has its own chance), which broke the bans. New artifacts such as the Scissors join the list of artifacts you can ban.
+- **Perk rerolls are the same for everyone in a match.** Since the update, how many rerolls a perk terminal gives depends on the facility upgrades on your save. In a match every player now gets every reroll upgrade, at the game's costs.
+- **Guaranteed perks fit the new unstable terminals.** An unstable terminal now deals one kind of perk per card (item, timed, mixed). The guaranteed perk at the first Silos safe area goes on the card of its own kind, so the page keeps one of each. Guaranteed perks also respect perks that rule each other out, as the game's own deal does.
+- **Deep Storage food covers the new levels.** The Core update added Deep Storage levels that place their food bars and pill bottles in a new way, and levels with other names (such as the Construct levels). The food rule now finds the food spots in all of them: every Deep Storage level that has a food bar or pill bottle spot gets one, and the first Deep Storage level is always one with such a spot. Match worlds change with this, so everyone needs this version to play together.
+- **Split labels for the later regions.** Abyss, Nest and Core levels lose their region prefix like the earlier regions ("Stress P1 01"), and a label cut short keeps its level number ("Production H. 03"), so levels of one kind stay apart in the split list.
+
 ## 0.9.8
 
 Everyone needs 0.9.8: it can't play with 0.9.7.

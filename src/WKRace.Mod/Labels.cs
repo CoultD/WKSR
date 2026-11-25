@@ -13,14 +13,13 @@ namespace WKRace.Mod
         private static readonly System.Collections.Generic.Dictionary<string, string> Shorts = new System.Collections.Generic.Dictionary<string, string>();
         private static readonly System.Collections.Generic.Dictionary<string, string> Ats = new System.Collections.Generic.Dictionary<string, string>();
 
-        // The label cut to the split list's column ("Storage 03", "Interlude Silo T.").
+        // The label cut to the split list's column ("Storage 03", "Production H. 03").
         public static string Short(string raw)
         {
             if (string.IsNullOrEmpty(raw)) return "";
             string text;
             if (Shorts.TryGetValue(raw, out text)) return text;
-            text = Level(raw);
-            if (text.Length > 16) text = text.Substring(0, 15) + ".";
+            text = RaceFormat.ShortLevelLabel(raw);
             if (Shorts.Count > 2000) Shorts.Clear();
             return Shorts[raw] = text;
         }

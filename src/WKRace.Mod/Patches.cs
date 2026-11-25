@@ -27,6 +27,7 @@ namespace WKRace.Mod
             Guarded("SpawnSeeding", () => SpawnSeeding.Apply(harmony));
             Guarded("RaceGuarantees", () => RaceGuarantees.Apply(harmony));
             Guarded("ArtifactBans", () => ArtifactBans.Apply(harmony));
+            Guarded("PerkRerolls", () => PerkRerolls.Apply(harmony));
             Guarded("SegmentEnd", () => SegmentEnd.Apply(harmony));
             Guarded("ChatInputBlock", () => ChatInputBlock.Apply(harmony));
             Guarded("InventoryLayout", () => InventoryLayout.Apply(harmony));

@@ -42,8 +42,9 @@ namespace WKRace.Mod
                     foreach (ENV_ArtifactDevice device in level.GetComponentsInChildren<ENV_ArtifactDevice>(true))
                     {
                         if (device.artifacts == null) continue;
-                        foreach (Item_Object item in device.artifacts)
+                        foreach (ENV_ArtifactDevice.Artifact entry in device.artifacts)
                         {
+                            Item_Object item = entry != null ? entry.artifact : null;
                             if (item == null || names.Contains(item.name)) continue;
                             names.Add(item.name);
                             string display = item.itemData != null ? item.itemData.itemName : null;
@@ -91,7 +92,9 @@ namespace WKRace.Mod
             try
             {
                 if (!RaceRules.InRaceWorld || Banned.Count == 0 || __instance.artifacts == null) return;
-                List<Item_Object> kept = __instance.artifacts.Where(a => a != null && !Banned.Contains(a.name)).ToList();
+                // Since The Core update each entry pairs an artifact with its own spawn chance.
+                List<ENV_ArtifactDevice.Artifact> kept = __instance.artifacts
+                    .Where(a => a != null && a.artifact != null && !Banned.Contains(a.artifact.name)).ToList();
                 if (kept.Count == __instance.artifacts.Count) return;
                 // Never leave fewer artifacts than pedestals: the game would draw from an empty list.
                 if (__instance.artifactSpawners != null && kept.Count < __instance.artifactSpawners.Count)

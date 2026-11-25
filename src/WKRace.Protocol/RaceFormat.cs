@@ -24,9 +24,21 @@ namespace WKRace.Protocol
         private static string BuildLevelLabel(string raw)
         {
             string s = Regex.Replace(raw, @"^M\d+_", "");
-            s = Regex.Replace(s, @"^(Silos|Pipeworks|Habitation)_", "");
+            s = Regex.Replace(s, @"^(Silos|Pipeworks|Habitation|Abyss|Nest|Core)_", "");
             s = s.Replace("Campaign_Interlude_", "").Replace('_', ' ');
             return Regex.Replace(s, @"(?<=[a-z])(?=[A-Z])", " ").Trim();
+        }
+
+        // The level label cut to max characters for the split list. A trailing level number is kept, so levels of
+        // one kind stay apart: "M6_Core_Production_Halls_03" -> "Production H. 03".
+        public static string ShortLevelLabel(string raw, int max = 16)
+        {
+            string text = LevelLabel(raw);
+            if (text.Length <= max) return text;
+            Match number = Regex.Match(text, @" \d+$");
+            int stem = max - 1 - (number.Success ? number.Length : 0);
+            if (!number.Success || stem < 4) return text.Substring(0, max - 1) + ".";
+            return text.Substring(0, stem).TrimEnd() + "." + number.Value;
         }
 
         // "Item_Artifact_Rebar_Return" -> "Rebar Return"

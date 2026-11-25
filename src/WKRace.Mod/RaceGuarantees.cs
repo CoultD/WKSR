@@ -13,7 +13,8 @@ namespace WKRace.Mod
     {
         // Bump whenever a rule changes: it is part of the world fingerprint, so racers on different rules never race.
         // 4: match worlds no longer read the player's save (MatchSave), food rule on the game's new level lists.
-        public const int RulesVersion = 4;
+        // 5: The Core update: the food rule knows the new Deep Storage levels (spawners by item id, Construct levels).
+        public const int RulesVersion = 5;
 
         // Which of the rules below the current race uses (its curated-seed modifiers). Seeding the perk consoles that
         // have no seed of their own is not a rule: every race needs it for identical worlds.
@@ -25,7 +26,8 @@ namespace WKRace.Mod
         }
 
         // ---- the rules -----------------------------------------------------------------------------
-        // Level names match by prefix, so "M1_Silos_Storage_" covers every Deep Storage level and an interlude name covers its numbered variants.
+        // Level names match by prefix, so an interlude name covers its numbered variants; "M1_Silos_Storage_" stands for
+        // every level of the Deep Storage sub-region (see InDeepStorage).
 
         // "At least one of these spawns in each such level" (only where the level has spawn points for it).
         private static readonly SpawnRule[] SpawnRules =
@@ -49,7 +51,10 @@ namespace WKRace.Mod
 
         // Deep Storage food also makes the first Deep Storage level one that has a food bar or pill bottle spot, and
         // keeps the secret room of a level open (its pill is always there, but the entrance is walled up at random).
+        // A Deep Storage level is one of the Deep Storage sub-region (since The Core update that includes levels not
+        // named M1_Silos_Storage_, such as M1_Silos_Construct_01), or one with that name.
         private const string DeepStorageLevels = "M1_Silos_Storage_";
+        private const string DeepStorageName = "Deep Storage";
         private static readonly string[] FoodItems = { "Item_Food_Bar", "Item_Pillbottle" };
         private static readonly string[] SecretRoomWalls = { "Level_Secret_entrace_Blocked", "Level_Secret_Entrance_Blocked" };
 
@@ -98,13 +103,14 @@ namespace WKRace.Mod
 
         private static readonly AccessTools.FieldRef<OS_Window, OS_Manager> WindowOs = AccessTools.FieldRefAccess<OS_Window, OS_Manager>("os");
         private static readonly AccessTools.FieldRef<App_PerkPage, List<App_PerkPage_Card>> PageCards = AccessTools.FieldRefAccess<App_PerkPage, List<App_PerkPage_Card>>("cards");
+        private static readonly AccessTools.FieldRef<UT_SpawnEntityByID, bool> SpawnerSpawning = AccessTools.FieldRefAccess<UT_SpawnEntityByID, bool>("spawning");
         private static readonly MethodInfo VendingUpdateButtons = AccessTools.Method(typeof(ENV_VendingMachine), "UpdateButtons");
 
         public static void Apply(Harmony harmony)
         {
             Patch(harmony, AccessTools.Method(typeof(UT_SpawnChance), "Check"), null, nameof(AfterSpawnCheck));
+            Patch(harmony, AccessTools.Method(typeof(UT_SpawnEntityByID), "Start"), null, nameof(AfterEntitySpawnerStart));
             Patch(harmony, AccessTools.Method(typeof(ENV_VendingMachine), "GenerateOptions"), null, nameof(AfterVendingGenerated));
-            Patch(harmony, AccessTools.Method(typeof(App_PerkPage), "Start"), nameof(BeforePerkPageStart), null);
             Patch(harmony, AccessTools.Method(typeof(App_PerkPage), "GenerateCards"), nameof(BeforePerkCards), nameof(AfterPerkCards));
             Patch(harmony, AccessTools.Method(typeof(M_Subregion), "GetGenerationLevels"), null, nameof(AfterGenerationLevels));
         }
@@ -171,11 +177,32 @@ namespace WKRace.Mod
             M_Level level = __instance.GetComponentInParent<M_Level>(true);
             if (level == null) return;
             StateFor(level).LastRollFrame = Time.frameCount;
-            if (On(MatchRules.DeepStorageFood) && __instance.gameObject.activeSelf && Matches(level, DeepStorageLevels) && IsSecretRoomWall(__instance.gameObject.name))
+            if (On(MatchRules.DeepStorageFood) && __instance.gameObject.activeSelf && InDeepStorage(level) && IsSecretRoomWall(__instance.gameObject.name))
             {
                 __instance.gameObject.SetActive(false);
                 Plugin.Log.LogInfo("Guarantee: the secret room in " + level.levelName + " is open");
             }
+        }
+
+        // Since The Core update newer levels place items with spawners that spawn an item by its id when they start
+        // (UT_SpawnEntityByID, at the game's own seeded chance). The rules count them as spawn points too.
+        private static void AfterEntitySpawnerStart(UT_SpawnEntityByID __instance)
+        {
+            if (!RaceRules.InRaceWorld || __instance == null || !__instance.spawnOnStart) return;
+            M_Level level = __instance.GetComponentInParent<M_Level>(true);
+            if (level != null) StateFor(level).LastRollFrame = Time.frameCount;
+        }
+
+        private static bool IsFoodSpawner(UT_SpawnEntityByID spawner)
+        {
+            return spawner != null && spawner.spawnOnStart && Array.IndexOf(FoodItems, spawner.idToSpawn) >= 0;
+        }
+
+        private static bool InDeepStorage(M_Level level)
+        {
+            if (level == null) return false;
+            if (level.subRegion != null && string.Equals(level.subRegion.subregionName, DeepStorageName, StringComparison.OrdinalIgnoreCase)) return true;
+            return Matches(level, DeepStorageLevels);
         }
 
         private static bool IsSecretRoomWall(string name)
@@ -233,7 +260,9 @@ namespace WKRace.Mod
             foreach (M_Level.LevelAssetHolder holder in pool)
             {
                 if (levels.Contains(holder) || candidates.Exists(c => NameOf(c) == NameOf(holder))) continue;
-                if (holder.spawnSettings != null && holder.spawnSettings.spawnChance <= 0f) continue;
+                // Only levels the game itself could pick here (it reads the level's own spawn settings).
+                M_Level candidate = holder.GetLevel();
+                if (candidate == null || (candidate.spawnSettings != null && candidate.spawnSettings.GetEffectiveSpawnChance() <= 0f)) continue;
                 if (HasFoodSpot(holder)) candidates.Add(holder);
             }
             if (candidates.Count == 0) return false;
@@ -259,10 +288,8 @@ namespace WKRace.Mod
                 foreach (WorldLoader.LevelInfo info in branch.levelTracker)
                 {
                     M_Level level = info != null ? info.GetLevel() : null;
-                    if (level == null || !Matches(level, DeepStorageLevels)) continue;
-                    bool food = false;
-                    foreach (UT_SpawnChance chance in level.GetComponentsInChildren<UT_SpawnChance>(true))
-                        if (Array.IndexOf(FoodItems, BaseName(chance.gameObject.name)) >= 0) { food = true; break; }
+                    if (level == null || !InDeepStorage(level)) continue;
+                    bool food = LevelHasFoodSpot(level);
                     if (food) Plugin.Log.LogInfo("Guarantee: the first Deep Storage level is " + level.levelName + " (it has food)");
                     else Plugin.Log.LogWarning("Guarantee: the first Deep Storage level is " + level.levelName + " and has no food bar or pill bottle spot");
                     return;
@@ -294,25 +321,29 @@ namespace WKRace.Mod
             bool has;
             if (FoodLevels.TryGetValue(name, out has)) return has;
             M_Level level = holder != null ? holder.GetLevel() : null;
-            if (level != null)
-            {
-                foreach (UT_SpawnChance chance in level.GetComponentsInChildren<UT_SpawnChance>(true))
-                {
-                    if (Array.IndexOf(FoodItems, BaseName(chance.gameObject.name)) < 0) continue;
-                    has = true;
-                    break;
-                }
-            }
+            has = level != null && LevelHasFoodSpot(level);
             FoodLevels[name] = has;
             return has;
+        }
+
+        // A food bar or pill bottle spot: an item with a spawn chance (older levels) or a spawner of one (newer ones).
+        private static bool LevelHasFoodSpot(M_Level level)
+        {
+            foreach (UT_SpawnChance chance in level.GetComponentsInChildren<UT_SpawnChance>(true))
+                if (Array.IndexOf(FoodItems, BaseName(chance.gameObject.name)) >= 0) return true;
+            foreach (UT_SpawnEntityByID spawner in level.GetComponentsInChildren<UT_SpawnEntityByID>(true))
+                if (IsFoodSpawner(spawner)) return true;
+            return false;
         }
 
         private static void EnforceSpawns(M_Level level)
         {
             foreach (SpawnRule rule in SpawnRules)
             {
-                if (!On(rule.Modifier) || !Matches(level, rule.Level)) continue;
-                var candidates = new List<UT_SpawnChance>();
+                bool where = rule.Level == DeepStorageLevels ? InDeepStorage(level) : Matches(level, rule.Level);
+                if (!On(rule.Modifier) || !where) continue;
+                // Spawn points of the item: items with a spawn chance, and spawners of it by id (newer levels).
+                var candidates = new List<Component>();
                 bool present = false;
                 foreach (UT_SpawnChance chance in level.GetComponentsInChildren<UT_SpawnChance>(true))
                 {
@@ -322,12 +353,27 @@ namespace WKRace.Mod
                     if (chance.gameObject.activeSelf) present = true;
                     candidates.Add(chance);
                 }
+                foreach (UT_SpawnEntityByID spawner in level.GetComponentsInChildren<UT_SpawnEntityByID>(true))
+                {
+                    if (spawner == null || !spawner.spawnOnStart || spawner.idToSpawn != rule.Item) continue;
+                    if (!spawner.gameObject.activeInHierarchy) continue;
+                    if (spawner.hasSpawned || SpawnerSpawning(spawner)) present = true;
+                    candidates.Add(spawner);
+                }
                 if (present || candidates.Count == 0) continue;
 
                 candidates.Sort((a, b) => string.CompareOrdinal(PathOf(level.transform, a.transform), PathOf(level.transform, b.transform)));
-                UT_SpawnChance pick = candidates[Pick(level.levelName + "/" + rule.Item, candidates.Count)];
-                pick.gameObject.SetActive(true);
-                pick.onSuccess?.Invoke();
+                Component pick = candidates[Pick(level.levelName + "/" + rule.Item, candidates.Count)];
+                if (pick is UT_SpawnEntityByID chosenSpawner)
+                {
+                    chosenSpawner.SpawnCustom(chosenSpawner.idToSpawn);
+                }
+                else
+                {
+                    UT_SpawnChance chance = (UT_SpawnChance)pick;
+                    chance.gameObject.SetActive(true);
+                    chance.onSuccess?.Invoke();
+                }
                 Plugin.Log.LogInfo("Guarantee: " + rule.Item + " spawned in " + level.levelName + " at " + PathOf(level.transform, pick.transform));
             }
         }
@@ -396,17 +442,8 @@ namespace WKRace.Mod
 
         // ---- perk pages ------------------------------------------------------------------------------------
 
-        // Some perk consoles are never given a seed by their level and would deal cards from an unseeded random
-        // generator, so the two racers would see different perks. Give them one derived from the race seed.
-        private static void BeforePerkPageStart(App_PerkPage __instance)
-        {
-            if (!RaceRules.InRaceWorld) return;
-            OS_Computer_Interface computer = ComputerOf(__instance);
-            if (computer == null || computer.GetSeed() != -1) return;
-            M_Level level = computer.GetComponentInParent<M_Level>(true);
-            string where = (level != null ? level.levelName + PathOf(level.transform, computer.transform) : computer.name) + "/" + computer.computerID;
-            computer.SetSeed(Pick("computer/" + where, int.MaxValue));
-        }
+        // Perk consoles need no seeding from the mod: since The Core update (Beta 0.70) the game seeds every computer
+        // itself from its level's seed and its place in the level (OS_Computer_Interface.rng), the same for everyone.
 
         // On a refresh: the titles on the cards that are about to be replaced.
         private static void BeforePerkCards(App_PerkPage __instance, bool refresh, out List<string> __state)
@@ -440,7 +477,7 @@ namespace WKRace.Mod
             var titles = new List<string>();
             foreach (App_PerkPage_Card c in cards) if (c != null && c.perk != null) titles.Add(c.perk.title + " (" + c.perk.cost + ")");
             Plugin.Log.LogInfo("Perk page at " + (level != null ? level.levelName : "?") + " [" + page.perkPageType + ", computer " +
-                               (computer != null ? computer.computerID + " seed " + computer.GetSeed() : "?") + "]: " + string.Join(", ", titles));
+                               (computer != null ? computer.computerID + " seed " + computer.rng.inc : "?") + "]: " + string.Join(", ", titles));
         }
 
         // justShown: on a refresh, the titles the page showed before it (never offered again by a rule), else null.
@@ -465,8 +502,14 @@ namespace WKRace.Mod
                     ENT_Player player = ENT_Player.playerObject;
                     Perk owned = player != null ? player.GetPerk(asset.id) : null;
                     if (owned != null && (!asset.canStack || (asset.stackMax > 0 && owned.stackAmount >= asset.stackMax))) continue;
+                    // Perks another held perk rules out (or that need one), as the game's own deal does.
+                    if (player != null && asset.perkBlacklist != null && player.HasPerkInList(asset.perkBlacklist)) continue;
+                    if (asset.perkWhitelist != null && asset.perkWhitelist.Count > 0 && (player == null || !player.HasPerkInList(asset.perkWhitelist))) continue;
                     options.Add(asset);
                 }
+                // An unstable page deals one kind of perk per card: prefer perks whose card this page has.
+                List<Perk> fitting = options.FindAll(p => SlotOf(page, p) < cards.Count);
+                if (fitting.Count > 0) options = fitting;
                 if (options.Count == 0) continue;
 
                 if (rule.All)
@@ -485,11 +528,27 @@ namespace WKRace.Mod
             return cards.Exists(c => c != null && c.perk != null && SameTitle(c.perk.title, title));
         }
 
-        // Puts a perk on one of the page's cards: a card of the same kind (free or paid) where possible, else the last
-        // one, and never a card that already shows one of the rule's perks.
+        // Since The Core update an unstable page deals its cards by kind: card 0 an item perk, card 1 a timed one,
+        // card 2 a mixed one (by the perk's tags), any kind after that. -1 for any card.
+        private static int SlotOf(App_PerkPage page, Perk perk)
+        {
+            if (page.perkPageType != App_PerkPage.PerkPageType.unstable || perk == null || perk.tags == null) return -1;
+            if (perk.tags.Contains("unstable-item")) return 0;
+            if (perk.tags.Contains("unstable-timed")) return 1;
+            if (perk.tags.Contains("unstable-mixed")) return 2;
+            return -1;
+        }
+
+        // Puts a perk on one of the page's cards: on an unstable page the card of the perk's kind, else a card of the
+        // same kind (free or paid) where possible, else the last one, and never a card that already shows one of the
+        // rule's perks.
         private static void PlacePerk(App_PerkPage page, List<App_PerkPage_Card> cards, Perk chosen, PerkRule rule, M_Level level)
         {
             int target = -1;
+            int slot = SlotOf(page, chosen);
+            if (slot >= 0 && slot < cards.Count && cards[slot] != null &&
+                !(cards[slot].perk != null && Array.Exists(rule.Titles, t => SameTitle(cards[slot].perk.title, t))))
+                target = slot;
             for (int pass = 0; pass < 2 && target < 0; pass++)
             {
                 for (int i = cards.Count - 1; i >= 0; i--)

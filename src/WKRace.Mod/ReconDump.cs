@@ -129,7 +129,7 @@ namespace WKRace.Mod
 
             foreach (OS_Computer_Interface pc in level.GetComponentsInChildren<OS_Computer_Interface>(true))
             {
-                sb.AppendLine("computer " + PathOf(root, pc.transform) + " id=" + pc.computerID + " facility=" + pc.facilityID + " seed=" + pc.GetSeed() +
+                sb.AppendLine("computer " + PathOf(root, pc.transform) + " id=" + pc.computerID + " facility=" + pc.facilityID + " seed=" + pc.rng.inc +
                               " disk=" + (pc.desktopData != null ? pc.desktopData.name : "-"));
                 if (pc.desktopData != null) DescribeDisk(sb, pc.desktopData, "  ", 0);
             }

@@ -220,6 +220,22 @@ namespace WKRace.Tests
             Assert.Equal("H Lab Ending", RaceFormat.LevelLabel("H_Lab_Ending"));
             Assert.Equal("", RaceFormat.LevelLabel(""));
             Assert.Equal("", RaceFormat.LevelLabel(null));
+            // The Core update's regions lose their prefix like the earlier ones.
+            Assert.Equal("Transit 03", RaceFormat.LevelLabel("M4_Abyss_Transit_03"));
+            Assert.Equal("Hot Zone 02", RaceFormat.LevelLabel("M5_Nest_HotZone_02"));
+            Assert.Equal("Stress P1 01", RaceFormat.LevelLabel("M6_Core_Stress_P1_01"));
+            Assert.Equal("Nest To Core 01 Safe Area", RaceFormat.LevelLabel("Campaign_Interlude_Nest_To_Core_01_SafeArea"));
+        }
+
+        [Fact]
+        public void RaceFormat_ShortLevelLabelKeepsTheLevelNumber()
+        {
+            Assert.Equal("Storage 03", RaceFormat.ShortLevelLabel("M1_Silos_Storage_03"));
+            Assert.Equal("Production H. 03", RaceFormat.ShortLevelLabel("M6_Core_Production_Halls_03"));
+            Assert.NotEqual(RaceFormat.ShortLevelLabel("M6_Core_Production_Halls_03"), RaceFormat.ShortLevelLabel("M6_Core_Production_Halls_04"));
+            Assert.Equal("Silo To Pipe. 01", RaceFormat.ShortLevelLabel("Campaign_Interlude_Silo_To_Pipeworks_01"));
+            Assert.Equal("Nest To Core 01.", RaceFormat.ShortLevelLabel("Campaign_Interlude_Nest_To_Core_01_SafeArea"));
+            Assert.True(RaceFormat.ShortLevelLabel("M6_Core_Production_Halls_03").Length <= 16);
         }
 
         [Fact]
